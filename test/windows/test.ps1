@@ -1,11 +1,16 @@
 # OffLok's Windows test, on a disposable Windows machine (GitHub's runner), as an administrator: installs
 # dist\offlok-<version>-setup.exe silently, checks the service, the system DNS and the blocking, uninstalls, and
-# checks that every interface has its original DNS back.
+# checks that every interface has its original DNS back. Unbound's usual port is reserved first, as Hyper-V, WSL
+# or Docker may do at boot: OffLok must take a spare one.
 . "$PSScriptRoot\lib.ps1"
 
 $setup = Get-ChildItem dist\offlok-*-setup.exe | Select-Object -First 1
 $before = Get-DnsSnapshot
 "# DNS before: $($before -join '; ')"
+# Fails when a range Windows reserved already holds the port, which does as well.
+netsh int ipv4 add excludedportrange protocol=udp startport=53530 numberofports=1 | Out-Null
+$reserved = $LASTEXITCODE -eq 0
+"# UDP ranges Windows keeps from programs: $((netsh int ipv4 show excludedportrange protocol=udp | Select-String '^\s*\d') -join ';' -replace '\s+', ' ')"
 
 Start-Process $setup.FullName -ArgumentList '/S' -Wait
 $dir = Join-Path $env:ProgramFiles 'OffLok'
@@ -17,6 +22,8 @@ Check 'offlok is in the PATH' { ([Environment]::GetEnvironmentVariable('Path', '
 Check 'resolves by itself, or falls back on this network' {
     Wait-Until 60 { (& $offlok status) -match '^(On|Fallback):' }
 }
+$port = [int]((Get-Content "$env:ProgramData\OffLok\unbound\unbound.conf" | Select-String '^\s*port:\s*(\d+)').Matches[0].Groups[1].Value)
+Check "Unbound's usual port reserved, it takes a spare one ($port)" { $port -ne 53530 -and $port -gt 0 }
 "# $((& $offlok status) -join ' | ')"
 "# DNS while on: $((Get-DnsSnapshot) -join '; ')"
 Check 'the interfaces point at OffLok' {
@@ -35,8 +42,8 @@ Check 'a broken DNSSEC signature is refused' {
 }
 # Every socket on the DNS ports, with its process: another program's (the runner's own) is shown, not counted.
 $ours = @(Get-Process offlokd, unbound -ErrorAction SilentlyContinue).Id
-$sockets = @(Get-NetUDPEndpoint -LocalPort 53, 53530 -ErrorAction SilentlyContinue) +
-    @(Get-NetTCPConnection -LocalPort 53, 53530 -State Listen -ErrorAction SilentlyContinue)
+$sockets = @(Get-NetUDPEndpoint -LocalPort 53, $port -ErrorAction SilentlyContinue) +
+    @(Get-NetTCPConnection -LocalPort 53, $port -State Listen -ErrorAction SilentlyContinue)
 "# DNS sockets: $(($sockets | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort) $((Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).Name)" }) -join '; ')"
 Check 'OffLok answers DNS on the loopback only' {
     $mine = @($sockets | Where-Object { $_.OwningProcess -in $ours })
@@ -65,5 +72,6 @@ Check 'offlok is out of the PATH' { ([Environment]::GetEnvironmentVariable('Path
 $after = Get-DnsSnapshot
 "# DNS after: $($after -join '; ')"
 Check 'every interface has its original DNS back' { -not (Compare-Object $before $after) }
+if ($reserved) { netsh int ipv4 delete excludedportrange protocol=udp startport=53530 numberofports=1 | Out-Null }
 
 Summary

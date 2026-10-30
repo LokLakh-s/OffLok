@@ -56,13 +56,16 @@ type Daemon struct {
 	UnboundUser string // account Unbound drops to; empty keeps root (tests only)
 	CABundle    string
 	Port        uint16 // the front's, on the loopback: 53
-	UnboundPort uint16 // Unbound's, on 127.0.0.1 only, which the front alone asks
-	Lists       *blocklist.Store
-	Version     string   // this offlokd's, which updates compare with
-	Updater     *Updater // nil: no updates (development builds, tests)
-	RootServers []netip.AddrPort
-	Log         *log.Logger
-	Debug       bool // log every probe (never a looked-up name)
+	UnboundPort uint16 // Unbound's usual port, on 127.0.0.1 only, which the front alone asks
+	// UnboundSpare are the ports Unbound takes when the usual one is not free: Windows reserves port ranges for
+	// Hyper-V, WSL and Docker at boot, anywhere between 49152 and 65535 by default.
+	UnboundSpare []uint16
+	Lists        *blocklist.Store
+	Version      string   // this offlokd's, which updates compare with
+	Updater      *Updater // nil: no updates (development builds, tests)
+	RootServers  []netip.AddrPort
+	Log          *log.Logger
+	Debug        bool // log every probe (never a looked-up name)
 	// Authorize asks whether a peer who is not root may change settings (polkit on Linux, with a password prompt in
 	// its session); nil refuses.
 	Authorize func(ipc.Peer) (bool, error)
@@ -85,6 +88,7 @@ type Daemon struct {
 	conf      []byte
 	front     *front.Server
 	listen    []netip.Addr // the front's
+	ubPort    uint16       // the port Unbound listens on: UnboundPort, or a spare one
 	applied   bool
 	rootOK    bool
 	rootFails int
@@ -131,7 +135,32 @@ func (d *Daemon) addr() netip.AddrPort {
 }
 
 func (d *Daemon) unboundAddr() netip.AddrPort {
-	return netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), d.UnboundPort)
+	port := d.ubPort
+	if port == 0 {
+		port = d.UnboundPort
+	}
+	return netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), port)
+}
+
+// pickUnboundPort returns the first of Unbound's ports free for both UDP and TCP, the usual one first; none free,
+// the usual one, which runUnbound then reports as taken.
+func (d *Daemon) pickUnboundPort() uint16 {
+	lo := netip.MustParseAddr("127.0.0.1")
+	for _, p := range append([]uint16{d.UnboundPort}, d.UnboundSpare...) {
+		if portFree([]netip.Addr{lo}, p) != nil {
+			continue
+		}
+		l, err := net.Listen("tcp", netip.AddrPortFrom(lo, p).String())
+		if err != nil {
+			continue
+		}
+		l.Close()
+		if p != d.UnboundPort {
+			d.Log.Printf("unbound: port %d is taken or reserved, using %d", d.UnboundPort, p)
+		}
+		return p
+	}
+	return d.UnboundPort
 }
 
 // Init loads the settings and prepares Unbound's directories and trust anchor.
@@ -408,9 +437,12 @@ func (d *Daemon) checkDoT(ctx context.Context, s settings.Settings) bool {
 func (d *Daemon) converge(ctx context.Context, s settings.Settings) (decision, error) {
 	dec := decide(situation{settings: s, rootOK: d.rootOK, dotOK: d.dotOK, signin: d.signinActive(), network: d.network})
 	listen := netinfo.Loopback()
+	if d.proc == nil {
+		d.ubPort = d.pickUnboundPort()
+	}
 	cfg := unbound.Config{
 		Listen:          []netip.Addr{d.unboundAddr().Addr()},
-		Port:            d.UnboundPort,
+		Port:            d.unboundAddr().Port(),
 		Username:        d.UnboundUser,
 		Directory:       d.keysDir(),
 		TrustAnchorFile: filepath.Join(d.keysDir(), "root.key"),
@@ -470,7 +502,7 @@ func (d *Daemon) runUnbound(ctx context.Context, conf []byte) error {
 		return coded("config", err)
 	}
 	if d.proc == nil {
-		if err := portFree([]netip.Addr{d.unboundAddr().Addr()}, d.UnboundPort); err != nil {
+		if err := portFree([]netip.Addr{d.unboundAddr().Addr()}, d.unboundAddr().Port()); err != nil {
 			return coded("port-taken", err)
 		}
 		p := &unbound.Process{Binary: d.UnboundBin, ConfPath: d.confPath(), Log: func(l string) { d.Log.Print("unbound: " + l) }}
@@ -567,7 +599,7 @@ func coded(code string, err error) error { return &codedError{code: code, err: e
 
 // runFront starts the front on the loopback addresses, again when they changed (IPv6 switched on or off).
 func (d *Daemon) runFront(listen []netip.Addr) error {
-	if d.front != nil && d.front.Running() && slices.Equal(listen, d.listen) {
+	if d.front != nil && d.front.Running() && slices.Equal(listen, d.listen) && d.front.Upstream == d.unboundAddr() {
 		return nil
 	}
 	if d.front != nil {

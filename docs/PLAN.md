@@ -31,8 +31,8 @@ them is wrong. Points marked **(to confirm)** are proposals that still wait for 
 - **Never break the user's internet.** Every change to the system DNS is followed by a self-test. If the test
   fails, the original settings come back automatically. Uninstalling restores the settings exactly as they were
   before the install.
-- **Loopback only.** OffLok's front listens on `127.0.0.1:53` and `[::1]:53`, Unbound on `127.0.0.1:53530`, and
-  nowhere else. OffLok must never become an open resolver on a café's Wi-Fi.
+- **Loopback only.** OffLok's front listens on `127.0.0.1:53` and `[::1]:53`, Unbound on `127.0.0.1:53530` (or a
+  spare port, see Windows), and nowhere else. OffLok must never become an open resolver on a café's Wi-Fi.
 - **No third-party resolver by default.** It recurses from the root servers. A fallback exists (below), and the
   user chooses it.
 - **Nothing phones home.** No telemetry, no analytics, no account. The only connections OffLok makes by itself are:
@@ -251,6 +251,10 @@ already runs their own Unbound keeps it.
   `uninstall` takes it out; no other entry changes.
 - **Each program carries the product's name and version** (go-winres, at build time), which SignPath requires,
   and the mark as its icon. The window's program also has a manifest for high-DPI screens.
+- **Unbound's port:** Windows reserves port ranges for Hyper-V, WSL and Docker at boot, by default anywhere
+  between 49152 and 65535, where 53530 is; binding a reserved port fails with "access forbidden". When Unbound
+  starts, offlokd takes the first free of 53530, 10530, 20530, 30530 and 40530 (spread below 49152, so one reserved
+  range cannot hold them all). The Windows test reserves 53530 first.
 - **Language:** the command and the tray menu follow Windows's display language (no `LANG` there); the window
   follows WebView2's.
 - **Signing:**

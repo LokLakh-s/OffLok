@@ -22,6 +22,7 @@ The first release.
 - **Linux:** `.deb` and `.rpm` packages for amd64 and arm64, with systemd-resolved or `/etc/resolv.conf`; the
   desktop app for amd64 (GTK 3, WebKitGTK 4.1).
 - **Windows 10 (version 2004) and 11, 64-bit:** an installer with NLnet Labs' Unbound 1.26.2, a service, the DNS
-  of every network interface, IPv4 and IPv6.
+  of every network interface, IPv4 and IPv6. Unbound takes a spare port when Windows reserved its usual one
+  (Hyper-V, WSL, Docker).
 - **Updates:** once a day OffLok looks for a new release on GitHub (it can be turned off). An update is installed
   only once its signature by OffLok's release key and every file's SHA-256 check out.

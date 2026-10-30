@@ -73,12 +73,14 @@ func serve(ctx context.Context, logger *log.Logger, stateDir, unboundDir, socket
 		CABundle:    caBundle(),
 		Port:        53,
 		UnboundPort: 53530,
-		Lists:       &blocklist.Store{Dir: filepath.Join(stateDir, "lists"), Log: logger, UserAgent: userAgent},
-		Version:     version,
-		RootServers: daemon.DefaultRootServers(),
-		Log:         logger,
-		Debug:       os.Getenv("OFFLOK_DEBUG") == "1",
-		Authorize:   authorize,
+		// Below 49152, spread out: a range Windows reserves cannot hold them all.
+		UnboundSpare: []uint16{10530, 20530, 30530, 40530},
+		Lists:        &blocklist.Store{Dir: filepath.Join(stateDir, "lists"), Log: logger, UserAgent: userAgent},
+		Version:      version,
+		RootServers:  daemon.DefaultRootServers(),
+		Log:          logger,
+		Debug:        os.Getenv("OFFLOK_DEBUG") == "1",
+		Authorize:    authorize,
 	}
 	// A development build has no release to compare with: it never looks for one.
 	if version != "dev" {
