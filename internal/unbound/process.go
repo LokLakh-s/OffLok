@@ -63,6 +63,7 @@ func (p *Process) Start() error {
 	if p.cmd != nil {
 		return errors.New("unbound already started")
 	}
+	killStale(p.Binary, p.ConfPath)
 	cmd := exec.Command(p.Binary, "-d", "-c", p.ConfPath)
 	cmd.SysProcAttr = sysProcAttr()
 	stderr, err := cmd.StderrPipe()

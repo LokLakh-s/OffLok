@@ -11,9 +11,6 @@ import (
 	"time"
 )
 
-// DefaultSocket is where offlokd listens on Linux and macOS.
-const DefaultSocket = "/run/offlok/offlok.sock"
-
 // listen opens the socket to every local user.
 func listen(path string) (net.Listener, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
