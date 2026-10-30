@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=OffLok
+Comment=OffLok's tray icon
+Comment[fr]=L'icône d'OffLok près de l'horloge
+Exec=offlok-desktop --hidden
+Icon=offlok
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

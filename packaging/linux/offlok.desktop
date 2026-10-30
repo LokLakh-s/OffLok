@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=OffLok
+GenericName=DNS resolver
+GenericName[fr]=Résolveur DNS
+Comment=Your computer as its own DNS resolver
+Comment[fr]=Ton ordinateur devient son propre DNS
+Exec=offlok-desktop
+Icon=offlok
+Terminal=false
+Categories=Network;System;
+Keywords=DNS;resolver;privacy;Unbound;
+Keywords[fr]=DNS;résolveur;vie privée;Unbound;
+StartupWMClass=offlok

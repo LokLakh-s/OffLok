@@ -1,0 +1,53 @@
+# The desktop package: OffLok's tray icon and window (Wails, GTK 3, WebKitGTK 4.1), on top of the offlok package of
+# the same version. Built by packaging/linux/build-desktop.sh; VERSION comes from the environment. amd64 only for now.
+name: offlok-desktop
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: LokLakh <contact@loklakh.fr>
+vendor: LokLakh
+homepage: https://github.com/LokLakh-s/OffLok
+license: MIT
+description: |
+  OffLok's tray icon and window.
+  Shows what OffLok does (resolving by itself, falling back, off), and changes its
+  settings, asking for the administrator's password when they need it.
+overrides:
+  deb:
+    depends:
+      - offlok (= ${VERSION})
+      - libgtk-3-0t64 | libgtk-3-0
+      - libwebkit2gtk-4.1-0
+  rpm:
+    depends:
+      - offlok = ${VERSION}
+      - gtk3
+      - webkit2gtk4.1
+contents:
+  - src: ./bin/amd64/offlok-desktop
+    dst: /usr/bin/offlok-desktop
+  - src: ./packaging/linux/offlok.desktop
+    dst: /usr/share/applications/offlok.desktop
+  - src: ./packaging/linux/offlok-desktop-autostart.desktop
+    dst: /etc/xdg/autostart/offlok-desktop.desktop
+    type: config
+  - src: ./packaging/linux/icons/offlok-16.png
+    dst: /usr/share/icons/hicolor/16x16/apps/offlok.png
+  - src: ./packaging/linux/icons/offlok-24.png
+    dst: /usr/share/icons/hicolor/24x24/apps/offlok.png
+  - src: ./packaging/linux/icons/offlok-32.png
+    dst: /usr/share/icons/hicolor/32x32/apps/offlok.png
+  - src: ./packaging/linux/icons/offlok-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/offlok.png
+  - src: ./packaging/linux/icons/offlok-64.png
+    dst: /usr/share/icons/hicolor/64x64/apps/offlok.png
+  - src: ./packaging/linux/icons/offlok-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/offlok.png
+  - src: ./packaging/linux/icons/offlok-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/offlok.png
+  - src: ./packaging/linux/icons/offlok-512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/offlok.png
+  - src: ./LICENSE
+    dst: /usr/share/doc/offlok-desktop/copyright

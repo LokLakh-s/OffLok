@@ -1,0 +1,111 @@
+# OffLok: at each push to main, and by hand, formatting, vet, the tests with the race detector, a build of the
+# portable packages for macOS, the Linux packages (offlok, then offlok-desktop in an image with GTK 3 and
+# WebKitGTK) and the Windows installer, the update tests' two test releases (test/update-builds.sh), then the
+# integration tests in disposable containers (test/integration/run.sh): the main scenario on the binaries, the
+# .deb's install and removal scripts, the desktop packages on a virtual screen, and an update from one test
+# release to the next. Then, on one of GitHub's Windows machines, the tests on Windows, the installer's test
+# (test/windows/test.ps1) and the update's (test/windows/update.ps1).
+#
+# On GitHub's machines: the integration tests need Docker. They change nothing on the host (each container has its
+# own network namespace). Nothing is deployed; the Windows installers are kept a day as an artifact, for the
+# Windows job.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+
+concurrency:
+  group: offlok-ci
+  cancel-in-progress: true
+
+env:
+  GO_IMAGE: golang:1.27.3-bookworm@sha256:972b4110ba0f47539a975c31e52c64765e1ff19f2d74469ae4a595c6676e80a5
+
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Go's caches live in two Docker volumes, offlok-gomod and offlok-gocache.
+      - name: Tests and packages
+        run: |
+          docker run --rm --cpus 2 --user "$(id -u):$(id -g)" -e HOME=/tmp -e GOFLAGS=-buildvcs=false \
+            -e GOCACHE=/gocache -e GOMODCACHE=/gomod -v offlok-gocache:/gocache -v offlok-gomod:/gomod \
+            -v "$PWD:/src" -w /src "$GO_IMAGE" bash -euo pipefail -c '
+              unformatted="$(gofmt -l .)"; [ -z "$unformatted" ] || { echo "::error::gofmt: $unformatted"; exit 1; }
+              go vet ./...
+              go test -race -count=1 -timeout 5m ./...
+              portable="./internal/unbound ./internal/probe ./internal/root ./internal/i18n ./internal/settings"
+              GOOS=darwin GOARCH=arm64 go build $portable
+              GOOS=windows GOARCH=amd64 go vet ./cmd/... ./internal/...
+              bash -n packaging/linux/*.sh packaging/windows/*.sh test/*.sh test/integration/*.sh
+              ./packaging/linux/build.sh
+              ./test/update-builds.sh linux'
+
+      - name: Desktop app
+        run: |
+          docker build -q -t offlok-desktop-build packaging/linux/desktop-build >/dev/null
+          docker run --rm --cpus 2 --user "$(id -u):$(id -g)" -e HOME=/tmp -e GOFLAGS=-buildvcs=false \
+            -e GOCACHE=/gocache -e GOMODCACHE=/gomod -v offlok-gocache:/gocache -v offlok-gomod:/gomod \
+            -v "$PWD:/src" -w /src offlok-desktop-build bash -euo pipefail -c '
+              unformatted="$(gofmt -l desktop)"; [ -z "$unformatted" ] || { echo "::error::gofmt: $unformatted"; exit 1; }
+              (cd desktop && go vet -tags gtk3 . && GOOS=windows CGO_ENABLED=0 go vet .)
+              ./packaging/linux/build-desktop.sh
+              ./packaging/windows/build.sh
+              ./test/update-builds.sh windows'
+
+      - name: Keep the Windows installers for the Windows job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-installer
+          path: |
+            dist/offlok-*-setup.exe
+            dist/update-test/offlok-*-setup.exe
+            dist/update-test/*.version
+          retention-days: 1
+
+      - name: Integration
+        run: ./test/integration/run.sh
+
+      - name: Packages' install and removal scripts
+        run: ./test/integration/run.sh package
+
+      - name: Desktop packages on a virtual screen
+        run: ./test/integration/run.sh desktop
+
+      - name: An update from one test release to the next
+        run: ./test/integration/run.sh update
+
+  windows:
+    needs: ci
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Tests on Windows
+        run: |
+          go vet ./...
+          go test -count=1 -timeout 5m ./...
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-installer
+          path: dist
+
+      - name: Install, check, uninstall
+        shell: pwsh
+        run: ./test/windows/test.ps1
+
+      - name: An update from one test release to the next
+        shell: pwsh
+        run: ./test/windows/update.ps1

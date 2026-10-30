@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OffLok</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <main>
+    <header class="status" data-state="starting">
+      <div class="mark">
+        <img src="img/offlok-mark.png" alt="" width="72" height="72">
+        <span class="badge" aria-hidden="true"></span>
+      </div>
+      <div class="status-text">
+        <span class="chip"></span>
+        <h1 class="title"></h1>
+        <p class="text"></p>
+      </div>
+    </header>
+
+    <section class="signin" hidden>
+      <button class="primary" type="button" data-action="signin"></button>
+      <p class="hint"></p>
+    </section>
+
+    <section class="update" hidden>
+      <div class="label">
+        <span class="name"></span>
+        <span class="sub"></span>
+      </div>
+      <div class="update-actions">
+        <button type="button" class="ghost small" data-action="notes" data-i18n="update.notes"></button>
+        <button type="button" class="primary small" data-action="update" data-i18n="update.install"></button>
+      </div>
+    </section>
+
+    <section class="card power">
+      <div class="row">
+        <div class="label">
+          <span class="name" data-i18n="power.label"></span>
+          <span class="sub power-state"></span>
+        </div>
+        <button class="switch" type="button" role="switch" data-action="power" aria-checked="false"><span></span></button>
+      </div>
+    </section>
+
+    <section class="card blocking">
+      <div class="card-head">
+        <h2 data-i18n="blocking.title"></h2>
+        <button type="button" class="ghost small" data-action="pause"></button>
+      </div>
+      <p class="paused" hidden></p>
+      <div class="cats"></div>
+      <form class="custom" autocomplete="off" hidden>
+        <input name="url" type="url" spellcheck="false" data-i18n-placeholder="custom.placeholder">
+        <button type="submit" class="secondary" data-i18n="custom.add"></button>
+      </form>
+      <ul class="custom-lists" hidden></ul>
+      <div class="row stack">
+        <div class="label">
+          <span class="name" data-i18n="check.label"></span>
+        </div>
+        <form class="check" autocomplete="off">
+          <input name="site" type="text" spellcheck="false" data-i18n-placeholder="check.placeholder">
+          <button type="submit" class="secondary" data-i18n="check.button"></button>
+        </form>
+        <div class="check-result" hidden>
+          <p></p>
+          <button type="button" class="primary small" data-action="trust" hidden data-i18n="trust.button"></button>
+        </div>
+      </div>
+      <div class="row stack trusted-row" hidden>
+        <div class="label"><span class="name" data-i18n="trusted.label"></span></div>
+        <ul class="trusted"></ul>
+      </div>
+    </section>
+
+    <section class="card settings">
+      <h2 data-i18n="settings.title"></h2>
+      <div class="row">
+        <div class="label">
+          <span class="name" data-i18n="strict.label"></span>
+          <span class="sub" data-i18n="strict.text"></span>
+        </div>
+        <button class="switch" type="button" role="switch" data-action="strict" aria-checked="false"><span></span></button>
+      </div>
+      <div class="row stack">
+        <div class="label">
+          <span class="name" data-i18n="dot.label"></span>
+          <span class="sub" data-i18n="dot.text"></span>
+        </div>
+        <form class="dot" autocomplete="off">
+          <input name="dot" type="text" spellcheck="false" data-i18n-placeholder="dot.placeholder">
+          <button type="submit" class="secondary" data-i18n="dot.save"></button>
+          <button type="button" class="ghost" data-action="dot-remove" data-i18n="dot.remove" hidden></button>
+        </form>
+      </div>
+      <div class="row">
+        <div class="label">
+          <span class="name" data-i18n="updates.label"></span>
+          <span class="sub" data-i18n="updates.text"></span>
+        </div>
+        <button class="switch" type="button" role="switch" data-action="updates" aria-checked="false"><span></span></button>
+      </div>
+      <div class="row stack">
+        <div class="label">
+          <span class="name" data-i18n="access.label"></span>
+        </div>
+        <div class="segmented" role="radiogroup">
+          <button type="button" role="radio" data-access="admins" data-i18n="access.admins"></button>
+          <button type="button" role="radio" data-access="everyone" data-i18n="access.everyone"></button>
+        </div>
+      </div>
+      <p class="admin-hint" data-i18n="admin.hint"></p>
+    </section>
+
+    <footer>
+      <span class="network"></span>
+      <span class="version"></span>
+    </footer>
+    <p class="error" role="alert" hidden></p>
+  </main>
+</body>
+</html>

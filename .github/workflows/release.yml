@@ -1,0 +1,146 @@
+# OffLok's releases: a tag v<VERSION> builds the Linux packages and the Windows installer, tests the installer on
+# one of GitHub's Windows machines, then publishes them on GitHub Releases with SHA256SUMS, signed with OffLok's
+# release key (docs/PLAN.md, "Updates and security"), and a build provenance attestation once the repository is
+# public.
+#
+# Every job runs on GitHub's own machines, never on a self-hosted one: SignPath, which will sign the Windows
+# programs, only signs what such a workflow built. The release key is the release environment's secret, which only v* tags reach.
+# Run by hand on a branch, it is a rehearsal: it builds and tests, and publishes nothing.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: offlok-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GO_IMAGE: golang:1.27.3-bookworm@sha256:972b4110ba0f47539a975c31e52c64765e1ff19f2d74469ae4a595c6676e80a5
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: The tag is the version
+        if: github.ref_type == 'tag'
+        run: test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+
+      # The integration tests need containers with systemd: the CI ran them on this very commit.
+      - name: The CI passed on this commit
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --status success \
+            --json databaseId --jq length)
+          test "$passed" -gt 0
+
+      # Go's caches are shared by both images through the runner's temporary folder.
+      - name: Tests and Linux packages
+        run: |
+          mkdir -p "$RUNNER_TEMP/go"
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e GOFLAGS=-buildvcs=false \
+            -e GOCACHE=/go/cache -e GOMODCACHE=/go/mod -v "$RUNNER_TEMP/go:/go" \
+            -v "$PWD:/src" -w /src "$GO_IMAGE" bash -euo pipefail -c '
+              go vet ./...
+              go test -count=1 -timeout 5m ./...
+              ./packaging/linux/build.sh'
+
+      - name: Desktop packages and the Windows installer
+        run: |
+          docker build -q -t offlok-desktop-build packaging/linux/desktop-build >/dev/null
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e GOFLAGS=-buildvcs=false \
+            -e GOCACHE=/go/cache -e GOMODCACHE=/go/mod -v "$RUNNER_TEMP/go:/go" \
+            -v "$PWD:/src" -w /src offlok-desktop-build bash -euo pipefail -c '
+              ./packaging/linux/build-desktop.sh
+              ./packaging/windows/build.sh'
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/offlok-*-setup.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+
+      - name: Install, check, uninstall
+        shell: pwsh
+        run: ./test/windows/test.ps1
+
+  publish:
+    needs: [build, windows]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+
+      # SHA256SUMS names every file with its hash; its signature is what the app checks before an update, and what
+      # anyone can check by hand (the notes say how).
+      - name: Checksums, signed with the release key
+        env:
+          RELEASE_KEY: ${{ secrets.OFFLOK_RELEASE_KEY }}
+        run: |
+          cp packaging/release/offlok-release-*.pub.pem dist/
+          cd dist
+          sha256sum -- *.deb *.rpm *.exe *.pem >SHA256SUMS
+          umask 077
+          printf '%s\n' "$RELEASE_KEY" >"$RUNNER_TEMP/release.key"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/release.key" -rawin -in SHA256SUMS -out SHA256SUMS.sig
+          rm "$RUNNER_TEMP/release.key"
+          openssl pkeyutl -verify -pubin -inkey offlok-release-*.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+          cat SHA256SUMS
+
+      # GitHub attests builds of public repositories only.
+      - if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.exe
+
+      - name: The release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          ./packaging/release/notes.sh "$version" >"$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "OffLok $version" \
+            --notes-file "$RUNNER_TEMP/notes.md"

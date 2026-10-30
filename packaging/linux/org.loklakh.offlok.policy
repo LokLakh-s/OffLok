@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- OffLok's settings, changed from the tray app (or the offlok command with its polkit option) by a user who is
+     not root: the administrator's password, then a few minutes without asking again (auth_admin_keep). Seeing the
+     status needs nothing. -->
+<policyconfig>
+  <vendor>OffLok</vendor>
+  <vendor_url>https://github.com/LokLakh-s/OffLok</vendor_url>
+  <icon_name>offlok</icon_name>
+  <action id="org.loklakh.offlok.manage">
+    <description>Change OffLok's settings</description>
+    <description xml:lang="fr">Changer les réglages d'OffLok</description>
+    <message>Changing OffLok's settings needs an administrator's password.</message>
+    <message xml:lang="fr">Changer les réglages d'OffLok demande le mot de passe d'un administrateur.</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

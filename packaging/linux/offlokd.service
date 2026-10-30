@@ -1,0 +1,24 @@
+[Unit]
+Description=OffLok: this computer as its own DNS resolver
+Documentation=https://github.com/LokLakh-s/OffLok
+After=network.target systemd-resolved.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/offlokd run
+# Whatever way offlokd stops, a crash included, the system gets its original DNS back before any restart.
+ExecStopPost=/usr/bin/offlokd restore
+Restart=always
+RestartSec=2
+RuntimeDirectory=offlok
+StateDirectory=offlok
+# offlokd writes /etc/resolv.conf or a systemd-resolved drop-in, so /etc stays writable (ProtectSystem=true only
+# protects /usr and /boot).
+ProtectSystem=true
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
