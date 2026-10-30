@@ -54,16 +54,25 @@ Copy-Item "$u\offlok-$B-setup.exe" $release
 $hash = (Get-FileHash "$release\offlok-$B-setup.exe" -Algorithm SHA256).Hash.ToLower()
 [IO.File]::WriteAllText("$latest\SHA256SUMS", "$hash  offlok-$B-setup.exe`n")
 go run ./test/release/sign test/release/test-release.key.pem "$latest\SHA256SUMS"
-$server = Start-Process python -ArgumentList '-m', 'http.server', '8088', '--bind', '127.0.0.1', '--directory', $web -PassThru -WindowStyle Hidden
+# A port free now: Windows may reserve any fixed one.
+$probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+$probe.Start()
+$port = $probe.LocalEndpoint.Port
+$probe.Stop()
+$server = Start-Process python -ArgumentList '-m', 'http.server', $port, '--bind', '127.0.0.1', '--directory', $web -PassThru -WindowStyle Hidden
+$base = "http://127.0.0.1:$port/releases"
+Check "the release server answers ($base)" { Wait-Until 20 { (Invoke-WebRequest "$base/latest/download/SHA256SUMS" -UseBasicParsing).StatusCode -eq 200 } }
 # The service takes its releases from there: test builds alone read OFFLOK_UPDATE_BASE.
-Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\OffLok -Name Environment -Type MultiString -Value 'OFFLOK_UPDATE_BASE=http://127.0.0.1:8088/releases'
+Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\OffLok -Name Environment -Type MultiString -Value "OFFLOK_UPDATE_BASE=$base"
 Restart-Service OffLok
 Wait-Until 60 { (& $offlok status) -match '^(On|Fallback):' } | Out-Null
 
 Start-Process (Join-Path $dir 'offlok-desktop.exe') -ArgumentList '--hidden'
 Check 'the tray app runs' { Wait-Until 20 { [bool](Get-Process offlok-desktop -ErrorAction SilentlyContinue) } }
 $updating = Get-Date
-Check 'B is offered' { (& $offlok update) -match "OffLok $B" }
+try { $answer = (& $offlok update 2>&1 | ForEach-Object { "$_" }) -join ' ' } catch { $answer = "$_" }
+"# offlok update: $answer"
+Check 'B is offered' { $answer -match "OffLok $B" }
 # The status's System line names offlokd's version; other lines name the update's.
 Check 'the service comes back as B' { Wait-Until 240 { (& $offlok status) -match "OffLok $B, Unbound" } }
 Check 'B resolves' { Wait-Until 60 { (& $offlok status) -match '^(On|Fallback):' } }
