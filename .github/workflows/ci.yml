@@ -31,11 +31,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Go's caches live in two Docker volumes, offlok-gomod and offlok-gocache.
+      # Go's caches are shared by both images through the runner's temporary folder, the runner's own (a Docker
+      # volume would be root's).
       - name: Tests and packages
         run: |
+          mkdir -p "$RUNNER_TEMP/go"
           docker run --rm --cpus 2 --user "$(id -u):$(id -g)" -e HOME=/tmp -e GOFLAGS=-buildvcs=false \
-            -e GOCACHE=/gocache -e GOMODCACHE=/gomod -v offlok-gocache:/gocache -v offlok-gomod:/gomod \
+            -e GOCACHE=/go/cache -e GOMODCACHE=/go/mod -v "$RUNNER_TEMP/go:/go" \
             -v "$PWD:/src" -w /src "$GO_IMAGE" bash -euo pipefail -c '
               unformatted="$(gofmt -l .)"; [ -z "$unformatted" ] || { echo "::error::gofmt: $unformatted"; exit 1; }
               go vet ./...
@@ -51,7 +53,7 @@ jobs:
         run: |
           docker build -q -t offlok-desktop-build packaging/linux/desktop-build >/dev/null
           docker run --rm --cpus 2 --user "$(id -u):$(id -g)" -e HOME=/tmp -e GOFLAGS=-buildvcs=false \
-            -e GOCACHE=/gocache -e GOMODCACHE=/gomod -v offlok-gocache:/gocache -v offlok-gomod:/gomod \
+            -e GOCACHE=/go/cache -e GOMODCACHE=/go/mod -v "$RUNNER_TEMP/go:/go" \
             -v "$PWD:/src" -w /src offlok-desktop-build bash -euo pipefail -c '
               unformatted="$(gofmt -l desktop)"; [ -z "$unformatted" ] || { echo "::error::gofmt: $unformatted"; exit 1; }
               (cd desktop && go vet -tags gtk3 . && GOOS=windows CGO_ENABLED=0 go vet .)
