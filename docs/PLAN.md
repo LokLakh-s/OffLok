@@ -225,11 +225,11 @@ already runs their own Unbound keeps it.
 
 - **Installer: NSIS** (zlib licence), built on Linux like everything else (`packaging/windows/build.sh`, in
   `packaging/linux/desktop-build`'s image): Go cross-compiles the three programs, and Wails needs no cgo on
-  Windows. It embeds NLnet Labs' **Unbound 1.26.2** (`unbound.exe` and its licence only: a 64-bit executable with
-  OpenSSL inside, importing nothing but Windows's own DLLs), pinned in `packaging/windows/unbound.env` with its
-  SHA-256 checked at every build. English or French, following Windows's language. It needs 64-bit Windows 10
-  version 2004 (build 19041) or later, for the API below. Files in `C:\Program Files\OffLok`, OffLok's own in
-  `C:\ProgramData\OffLok` (settings, lists, saved DNS, `offlokd.log`, capped at 1 MB).
+  Windows. It embeds NLnet Labs' **Unbound** (`unbound.exe` and its licence only: a 64-bit executable with OpenSSL
+  inside, importing nothing but Windows's own DLLs), pinned in `packaging/windows/unbound.env` with its SHA-256
+  checked at every build (1.26.2 in OffLok 0.5.0). English or French, following Windows's language. It needs
+  64-bit Windows 10 version 2004 (build 19041) or later, for the API below. Files in `C:\Program Files\OffLok`,
+  OffLok's own in `C:\ProgramData\OffLok` (settings, lists, saved DNS, `offlokd.log`, capped at 1 MB).
 - **System DNS:** `SetInterfaceDnsSettings` (iphlpapi), per interface, IPv4 and IPv6 apart: `127.0.0.1` and `::1`
   on every interface that is up, a new one (Wi-Fi switch, VPN) set as soon as it shows. Each interface's original
   is saved first: empty means automatic (DHCP, router advertisements), which an empty setting gives back. The
@@ -310,8 +310,22 @@ already runs their own Unbound keeps it.
 ## Updates and security
 
 - **Unbound updates on Windows and macOS.** The `.pkg` and the Windows installer ship Unbound, so **OffLok must
-  ship Unbound's security fixes**. A scheduled CI job watches NLnet Labs' releases and prepares a new OffLok
-  release.
+  ship Unbound's security fixes**. A scheduled job (`.github/workflows/unbound.yml`) watches NLnet Labs' releases
+  every day and prepares a new OffLok release; **the maintainer approves each one** (decided 2026-10-30):
+  - a newer `unbound-<version>.zip` (64-bit, no release candidate) is taken only with a good OpenPGP signature by
+    NLnet Labs' release key G2 (`2310 1869 0C4D 903E F419 146A A144 323D EAAC DF45`, in
+    `packaging/windows/nlnetlabs-releases-g2.asc`, the same on nlnetlabs.nl and keys.openpgp.org) and the SHA-256
+    NLnet Labs published;
+  - `packaging/windows/unbound-update.sh` pins it, adds a patch release to `CHANGELOG.md` with the CVEs NLnet Labs'
+    advisories say it fixes (or adds it to the version in progress, when VERSION is not released yet), and the
+    job opens a pull request and runs the whole CI on its branch; a newer Unbound closes an older one's request.
+    The repository must let GitHub Actions open pull requests (Settings, Actions, General); when it cannot, an
+    issue says so, with the link that opens it;
+  - merging it is the approval: once the CI passes on main, the job makes the tag and runs the release workflow
+    (what the workflow's own token does starts no workflow, a dispatch excepted). A version in progress ships the
+    new Unbound with its own release;
+  - GitHub turns a public repository's schedules off after 60 days without activity: the Actions tab's
+    "Enable workflow" turns it back on.
 - **The app checks for updates** and offers them. Before installing one, it verifies the signature. The check is
   **on by default and can be turned off** (decided 2026-10-30): once a day it asks GitHub, which then sees the
   computer's address and that it runs OffLok. The Windows installer says so next to a ticked box, the window has

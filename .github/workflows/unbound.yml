@@ -1,0 +1,122 @@
+# OffLok's Windows installer ships NLnet Labs' Unbound (packaging/windows/unbound.env), so OffLok must ship
+# Unbound's security fixes itself. Every day this looks for a newer Unbound for Windows; when NLnet Labs signed
+# one, it opens a pull request that pins it, in a new OffLok patch release (packaging/windows/unbound-update.sh), and
+# runs the CI on it. Merging the pull request is the maintainer's approval: once the CI passes on main, the
+# release's tag is made here and the release workflow runs on it.
+#
+# What the workflow's own token does starts no other workflow, except a dispatch: the CI and the release are
+# dispatched. GitHub turns a public repository's schedules off after 60 days without activity.
+name: Unbound
+
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'A test: as if this Unbound were pinned; nothing changes on GitHub'
+        required: false
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: offlok-unbound-${{ github.event_name == 'workflow_run' && 'release' || 'watch' }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  watch:
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: A newer Unbound, signed by NLnet Labs
+        id: update
+        env:
+          FROM: ${{ inputs.from }}
+        run: |
+          unbound=$(./packaging/windows/unbound-update.sh ${FROM:+--from "$FROM"})
+          echo "unbound=$unbound" >>"$GITHUB_OUTPUT"
+          git diff
+
+      - name: Its pull request, and the CI on it
+        if: steps.update.outputs.unbound != '' && !inputs.from
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UNBOUND: ${{ steps.update.outputs.unbound }}
+        run: |
+          branch=unbound-$UNBOUND
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "$branch is there already"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git commit -qam "Unbound $UNBOUND for Windows"
+          git push -q origin "$branch"
+          gh workflow run ci.yml --ref "$branch"
+          runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/ci.yml?query=branch%3A$branch"
+          printf '\nThe CI on this branch: %s\n' "$runs" >>dist/unbound-update.md
+          title="OffLok $(cat VERSION): Unbound $UNBOUND for Windows"
+          # Without "Allow GitHub Actions to create pull requests" (Settings, Actions, General), an issue says so,
+          # with the link that opens it: the branch is there, and the next days' runs would stay silent.
+          if ! url=$(gh pr create --base main --head "$branch" --title "$title" \
+            --body-file dist/unbound-update.md); then
+            printf '\n**The pull request could not be opened**: %s\n' \
+              "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$branch?expand=1" >>dist/unbound-update.md
+            gh issue create --title "$title" --body-file dist/unbound-update.md
+            exit 1
+          fi
+          # An older Unbound's pull request, not merged, is superseded.
+          gh pr list --state open --json number,headRefName --jq \
+            ".[] | select((.headRefName | startswith(\"unbound-\")) and .headRefName != \"$branch\") | .number" |
+            while read -r n; do gh pr close "$n" --delete-branch --comment "Superseded by $url"; done
+
+  # After the CI on main: when the commit is a merged Unbound pull request that changed VERSION, its tag and release.
+  release:
+    if: >-
+      github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
+      - name: The tag, and the release workflow on it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          branch=$(gh pr list --state merged --base main --limit 30 --json headRefName,mergeCommit,isCrossRepository \
+            --jq ".[] | select(.mergeCommit.oid == \"$SHA\" and (.isCrossRepository | not)) | .headRefName")
+          case "$branch" in unbound-*) ;; *) echo "Not an Unbound pull request: nothing to release"; exit 0 ;; esac
+          version=$(cat VERSION)
+          if [ "$version" = "$(git show HEAD^:VERSION)" ]; then
+            echo "VERSION did not change: OffLok $version ships Unbound with its own release"
+            exit 0
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+            echo "v$version is there already"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/v$version" -f sha="$SHA" >/dev/null
+          gh workflow run release.yml --ref "v$version"
+          echo "v$version made, the release workflow runs on it"

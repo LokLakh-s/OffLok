@@ -72,7 +72,8 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 - [x] Before going public: `C:\ProgramData\OffLok` locked to SYSTEM and the administrators, `offlok` in the
       PATH, the programs' name and version, the installer's page on the DNS it changes and on the update check,
       Windows's display language for the command and the tray menu
-- [ ] Unbound's security fixes shipped by OffLok: a scheduled job that watches NLnet Labs' releases
+- [x] Unbound's security fixes shipped by OffLok: a daily job that checks NLnet Labs' signature on a new Unbound,
+      opens a pull request for a new OffLok release and runs the CI on it; merging it releases (2026-10-30)
 - [x] Public under `LokLakh-s`, 0.5.0 the first release on GitHub Releases (2026-10-30); the GitHub name `OffLok`
       reserved
 - [ ] SignPath Foundation: the application, ready in [SIGNPATH.md](SIGNPATH.md), sent by the maintainer
