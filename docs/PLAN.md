@@ -254,7 +254,9 @@ already runs their own Unbound keeps it.
 - **Unbound's port:** Windows reserves port ranges for Hyper-V, WSL and Docker at boot, by default anywhere
   between 49152 and 65535, where 53530 is; binding a reserved port fails with "access forbidden". When Unbound
   starts, offlokd takes the first free of 53530, 10530, 20530, 30530 and 40530 (spread below 49152, so one reserved
-  range cannot hold them all). The Windows test reserves 53530 first.
+  range cannot hold them all). The Windows test has another program hold 53530 first. (A range reserved by hand
+  with `netsh int ipv4 add excludedportrange` only keeps Windows from handing the port out; a program can still
+  take it.)
 - **Language:** the command and the tray menu follow Windows's display language (no `LANG` there); the window
   follows WebView2's.
 - **Signing:**

@@ -1,16 +1,14 @@
 # OffLok's Windows test, on a disposable Windows machine (GitHub's runner), as an administrator: installs
 # dist\offlok-<version>-setup.exe silently, checks the service, the system DNS and the blocking, uninstalls, and
-# checks that every interface has its original DNS back. Unbound's usual port is reserved first, as Hyper-V, WSL
-# or Docker may do at boot: OffLok must take a spare one.
+# checks that every interface has its original DNS back. Unbound's usual port is held by another program first, as
+# a range Hyper-V, WSL or Docker reserve at boot may hold it: OffLok must take a spare one.
 . "$PSScriptRoot\lib.ps1"
 
 $setup = Get-ChildItem dist\offlok-*-setup.exe | Select-Object -First 1
 $before = Get-DnsSnapshot
 "# DNS before: $($before -join '; ')"
-# Fails when a range Windows reserved already holds the port, which does as well.
-netsh int ipv4 add excludedportrange protocol=udp startport=53530 numberofports=1 | Out-Null
-$reserved = $LASTEXITCODE -eq 0
-"# UDP ranges Windows keeps from programs: $((netsh int ipv4 show excludedportrange protocol=udp | Select-String '^\s*\d') -join ';' -replace '\s+', ' ')"
+# A range Windows reserved may already hold the port: then nothing can take it, which does as well.
+try { $holder = [Net.Sockets.UdpClient]::new([Net.IPEndPoint]::new([Net.IPAddress]::Loopback, 53530)) } catch { $holder = $null }
 
 Start-Process $setup.FullName -ArgumentList '/S' -Wait
 $dir = Join-Path $env:ProgramFiles 'OffLok'
@@ -23,7 +21,8 @@ Check 'resolves by itself, or falls back on this network' {
     Wait-Until 60 { (& $offlok status) -match '^(On|Fallback):' }
 }
 $port = [int]((Get-Content "$env:ProgramData\OffLok\unbound\unbound.conf" | Select-String '^\s*port:\s*(\d+)').Matches[0].Groups[1].Value)
-Check "Unbound's usual port reserved, it takes a spare one ($port)" { $port -ne 53530 -and $port -gt 0 }
+Check "Unbound's usual port taken, it takes a spare one ($port)" { $port -ne 53530 -and $port -gt 0 }
+if ($holder) { $holder.Dispose() }
 "# $((& $offlok status) -join ' | ')"
 "# DNS while on: $((Get-DnsSnapshot) -join '; ')"
 Check 'the interfaces point at OffLok' {
@@ -72,6 +71,5 @@ Check 'offlok is out of the PATH' { ([Environment]::GetEnvironmentVariable('Path
 $after = Get-DnsSnapshot
 "# DNS after: $($after -join '; ')"
 Check 'every interface has its original DNS back' { -not (Compare-Object $before $after) }
-if ($reserved) { netsh int ipv4 delete excludedportrange protocol=udp startport=53530 numberofports=1 | Out-Null }
 
 Summary
