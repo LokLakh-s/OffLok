@@ -1,0 +1,50 @@
+# OffLok on macOS, on one of GitHub's macOS 26 machines (Apple silicon): vet and the tests, then offlokd and offlok
+# built there, installed with Homebrew's Unbound, and test/macos/test.sh (the launchd service, every network
+# service's DNS, DNSSEC, blocking, a crash, the fallback and strict mode behind pf, the uninstall). Apart from the CI
+# (which takes 25 minutes on Linux first): this needs none of it.
+name: macOS
+
+on:
+  push:
+    branches: [main, macos] # macos: while the port is written; dropped when it is merged
+    paths-ignore: ['**.md', 'docs/**', 'site/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: offlok-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Tests on macOS
+        run: |
+          go vet ./...
+          go test -count=1 -timeout 5m ./...
+
+      - name: offlokd and offlok
+        run: |
+          go build -trimpath -o bin/darwin/offlokd ./cmd/offlokd
+          go build -trimpath -o bin/darwin/offlok ./cmd/offlok
+
+      - name: Homebrew's Unbound
+        run: brew install unbound
+
+      - name: Install, check, uninstall
+        run: ./test/macos/test.sh
+
+      - name: offlokd's log, when something failed
+        if: failure()
+        run: |
+          sudo cat "/Library/Application Support/OffLok/offlokd.log" "/Library/Application Support/OffLok/offlokd.err" 2>/dev/null | tail -100 || true
