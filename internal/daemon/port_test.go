@@ -5,14 +5,24 @@ import (
 	"testing"
 )
 
+// freePort returns a loopback port free for both UDP and TCP: Windows may reserve one and not the other.
 func freePort(t *testing.T) uint16 {
 	t.Helper()
-	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	for range 100 {
+		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		port := pc.LocalAddr().(*net.UDPAddr).Port
+		l, err := net.Listen("tcp", pc.LocalAddr().String())
+		pc.Close()
+		if err == nil {
+			l.Close()
+			return uint16(port)
+		}
 	}
-	defer pc.Close()
-	return uint16(pc.LocalAddr().(*net.UDPAddr).Port)
+	t.Fatal("no loopback port free for both UDP and TCP")
+	return 0
 }
 
 // A port another program holds (or Windows reserved) makes Unbound take a spare one; the usual one comes first.

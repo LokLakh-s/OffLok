@@ -24,14 +24,23 @@ func upstream(t *testing.T) (netip.AddrPort, *atomic.Int32) {
 		}
 		_ = w.WriteMsg(r)
 	})
-	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr := netip.MustParseAddrPort(pc.LocalAddr().String())
-	l, err := net.Listen("tcp", addr.String())
-	if err != nil {
-		t.Fatal(err)
+	// The same port for UDP and TCP; Windows may reserve one and not the other.
+	var pc net.PacketConn
+	var l net.Listener
+	var addr netip.AddrPort
+	for i := 0; ; i++ {
+		var err error
+		if pc, err = net.ListenPacket("udp", "127.0.0.1:0"); err != nil {
+			t.Fatal(err)
+		}
+		addr = netip.MustParseAddrPort(pc.LocalAddr().String())
+		if l, err = net.Listen("tcp", addr.String()); err == nil {
+			break
+		}
+		pc.Close()
+		if i == 100 {
+			t.Fatal(err)
+		}
 	}
 	for _, srv := range []*dns.Server{{PacketConn: pc, Handler: h}, {Listener: l, Handler: h}} {
 		go func(srv *dns.Server) { _ = srv.ActivateAndServe() }(srv)
@@ -40,15 +49,24 @@ func upstream(t *testing.T) (netip.AddrPort, *atomic.Int32) {
 	return addr, &n
 }
 
+// freeAddr returns a loopback port free for both UDP and TCP: Windows may reserve one and not the other.
 func freeAddr(t *testing.T) netip.AddrPort {
 	t.Helper()
-	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	for range 100 {
+		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		a := netip.MustParseAddrPort(pc.LocalAddr().String())
+		l, err := net.Listen("tcp", a.String())
+		pc.Close()
+		if err == nil {
+			l.Close()
+			return a
+		}
 	}
-	a := netip.MustParseAddrPort(pc.LocalAddr().String())
-	pc.Close()
-	return a
+	t.Fatal("no loopback port free for both UDP and TCP")
+	return netip.AddrPort{}
 }
 
 func ask(t *testing.T, network string, addr netip.AddrPort, name string, qtype uint16) *dns.Msg {
