@@ -2,6 +2,14 @@
 
 What changes from one OffLok release to the next. Each release's notes on GitHub start with its section here.
 
+## 0.5.1
+
+- **Windows: the window opens out of the tray icon**, as Windows's own flyouts do: no frame and no taskbar button,
+  next to the icon, closed by a click elsewhere or by Escape. UAC's prompt for one of its settings leaves it open.
+- **The app has its icon**: the window and the taskbar showed none on Windows.
+- **The mark is full inside its ring**, a very dark teal behind the gold tree: in the app, the tray, the installer,
+  the packages and the website.
+
 ## 0.5.0
 
 The first release.
