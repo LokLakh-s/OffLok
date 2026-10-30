@@ -1,5 +1,5 @@
 #!/bin/sh
-# The website, offlok.org, ready to serve in bin/site/: the pages with {{VERSION}} replaced by the release their
+# The website, offlok.org, ready to serve in bin/site/: every page with {{VERSION}} replaced by the release its
 # download links point at (the argument, or VERSION by default; a deployment passes the latest published release).
 set -eu
 cd "$(dirname "$0")/.."
@@ -12,7 +12,7 @@ out=bin/site
 rm -rf "$out"
 mkdir -p "$out"
 cp -R site/assets site/img site/favicon.ico "$out/"
-for page in index.html en/index.html; do
+(cd site && find . -name '*.html') | while read -r page; do
 	mkdir -p "$(dirname "$out/$page")"
 	sed "s/{{VERSION}}/$version/g" "site/$page" > "$out/$page"
 done
