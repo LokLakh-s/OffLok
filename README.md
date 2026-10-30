@@ -95,6 +95,7 @@ test/integration/run.sh           # the main scenario in a disposable systemd co
 test/integration/run.sh package   # the .deb's install and removal scripts
 test/integration/run.sh desktop   # the desktop packages on a virtual screen, screenshots in bin/shots/
 packaging/windows/build.sh        # the Windows installer, dist/offlok-<version>-setup.exe (built on Linux too)
+site/build.sh                     # the website, offlok.org, in bin/site/ (French, and English under en/)
 ```
 
 `test/windows/test.ps1` checks the Windows installer on a disposable Windows machine (the CI uses GitHub's).

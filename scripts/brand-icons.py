@@ -1,6 +1,7 @@
 """OffLok's icons, from its marks in assets/brand/: the taskbar's four states from the bold mark (on: the mark;
 fallback and error: an orange or red dot at the bottom right; off: the mark in grey, chosen on 29/10/2026), the app
-icon in the desktop's sizes (the mark alone on transparency, 94 % of the square), and the window's mark.
+icon in the desktop's sizes (the mark alone on transparency, 94 % of the square), the window's mark, and the
+website's images.
 Run from the repository: python3 scripts/brand-icons.py"""
 import numpy as np
 from PIL import Image, ImageDraw
@@ -51,4 +52,19 @@ if __name__ == "__main__":
     sizes = [256, 128, 64, 48, 32, 24, 16]
     frames = [padded(Image.open(SMALL).convert("RGBA") if n <= 32 else mark, n) for n in sizes]
     frames[0].save("packaging/windows/offlok.ico", format="ICO", sizes=[(n, n) for n in sizes], append_images=frames[1:])
-    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png, packaging/windows/offlok.ico")
+    # The website: the mark (hero, link previews), the bold mark where it is small (header, favicons), the tray's
+    # states at twice their shown size, and a home-screen icon on the window's dark background.
+    mark.resize((512, 512), Image.LANCZOS).save("site/img/offlok-mark.png", optimize=True)
+    mark.resize((640, 640), Image.LANCZOS).save("site/img/offlok-mark.webp", quality=90, method=6)
+    bold = Image.open(SMALL).convert("RGBA")
+    bold.resize((64, 64), Image.LANCZOS).save("site/img/offlok-mark-small.png", optimize=True)
+    icons = [padded(bold if n <= 32 else mark, n) for n in (48, 32, 16)]
+    icons[0].save("site/favicon.ico", format="ICO", sizes=[(48, 48), (32, 32), (16, 16)], append_images=icons[1:])
+    padded(mark, 192).save("site/img/icon-192.png", optimize=True)
+    tile = Image.new("RGBA", (180, 180), (12, 19, 20, 255))
+    tile.alpha_composite(padded(mark, 180, 0.78))
+    tile.convert("RGB").save("site/img/apple-touch-icon.png", optimize=True)
+    tray = bold.resize((384, 384), Image.LANCZOS)
+    for name, img in {"on": tray, "fallback": badge(tray, ORANGE), "error": badge(tray, RED), "off": grey(tray)}.items():
+        img.resize((96, 96), Image.LANCZOS).save(f"site/img/state-{name}.png", optimize=True)
+    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png, packaging/windows/offlok.ico, site/")

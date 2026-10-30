@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>OffLok — your computer, its own DNS</title>
+  <meta name="description" content="OffLok, free and open-source software for Windows and Linux, makes your computer its own DNS: it finds the address of every site itself, with no internet provider, Google or Cloudflare in between.">
+  <link rel="canonical" href="https://offlok.org/en/">
+  <link rel="alternate" hreflang="fr" href="https://offlok.org/">
+  <link rel="alternate" hreflang="en" href="https://offlok.org/en/">
+  <link rel="alternate" hreflang="x-default" href="https://offlok.org/en/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OffLok">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:url" content="https://offlok.org/en/">
+  <meta property="og:title" content="OffLok — your computer, its own DNS">
+  <meta property="og:description" content="Free and open source: your computer finds the address of every site itself, with no middleman receiving the list of your visits.">
+  <meta property="og:image" content="https://offlok.org/img/offlok-mark.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#f4f7f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c1314" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="../favicon.ico" sizes="48x48">
+  <link rel="icon" href="../img/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="preload" href="../assets/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/site.css">
+  <script src="../assets/site.js" defer></script>
+</head>
+<body>
+<svg width="0" height="0" class="sr-only" aria-hidden="true">
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"/><path d="M15 9h4a1 1 0 0 1 1 1v11"/><path d="M8 8h3M8 12h3M8 16h3M2 21h20"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.3 2 12 2 12s3.5 7 10 7c1.9 0 3.6-.6 5-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></symbol>
+  <symbol id="i-seal" viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="6"/><path d="M9.5 9.5l1.8 1.8 3.2-3.6"/><path d="M8.6 14.5L7 21l5-2.5 5 2.5-1.6-6.5"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-window" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15H17"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><path d="M12 19.5h.01"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-tree" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><circle cx="7" cy="11.5" r="2"/><circle cx="17" cy="11.5" r="2"/><circle cx="4.5" cy="19" r="1.7"/><circle cx="9.5" cy="19" r="1.7"/><circle cx="14.5" cy="19" r="1.7"/><circle cx="19.5" cy="19" r="1.7"/><path d="M10.8 6.2L8.2 9.8M13.2 6.2l2.6 3.6M6.3 13.4l-1.1 3.9M7.7 13.4l1.1 3.9M16.3 13.4l-1.1 3.9M17.7 13.4l1.1 3.9"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/><path d="M8 7.5h.01M8 16.5h.01"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M2.5 9h19M12 9v11M12 9S10.5 4 8 4.5 7 9 12 9zM12 9s1.5-5 4-4.5S17 9 12 9z"/></symbol>
+  <symbol id="i-user-off" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href="#top" aria-label="OffLok, top of the page">
+      <img src="../img/offlok-mark-small.png" alt="" width="34" height="34">OffLok
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#dns">DNS</a>
+      <a href="#why">Why</a>
+      <a href="#download">Download</a>
+      <a href="#daily">Every day</a>
+      <a href="#history">History</a>
+      <a href="#faq">Questions</a>
+    </nav>
+    <div class="bar-end">
+      <a class="lang" href="../" hreflang="fr" lang="fr" title="Cette page en français">FR</a>
+      <a class="btn btn-gold btn-small" href="#download"><svg class="icon"><use href="#i-download"/></svg>Download</a>
+      <details class="menu">
+        <summary aria-label="Menu"><svg class="icon"><use href="#i-menu"/></svg></summary>
+        <nav class="menu-list" aria-label="Sections">
+          <a href="#dns">DNS</a>
+          <a href="#why">Why</a>
+          <a href="#download">Download</a>
+          <a href="#daily">Every day</a>
+          <a href="#history">History</a>
+          <a href="#faq">Questions</a>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" id="top">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="pill"><span class="tag">Open source</span>Free, no account · version {{VERSION}}</span>
+        <h1>The internet's address book, <span class="grad">at home</span>.</h1>
+        <p class="lead">OffLok makes your computer its own <strong>DNS</strong>, the address book that turns a site's name into an address. It looks up every answer at the source, starting from the root of the internet: no more internet provider, Google or Cloudflare in the middle, receiving the list of every site you visit.</p>
+        <div class="cta">
+          <a class="btn btn-gold" href="#download" data-cta data-label-windows="Download for Windows" data-label-linux="Download for Linux" data-label-mac="Coming soon to Mac" data-label-mobile="For computers"><svg class="icon"><use href="#i-download"/></svg><span>Download OffLok</span></a>
+          <a class="btn btn-ghost" href="#dns">What is DNS?</a>
+        </div>
+        <p class="reassure">
+          <span><svg class="icon"><use href="#i-check"/></svg>Windows 10 and 11, Linux</span>
+          <span><svg class="icon"><use href="#i-check"/></svg>Mac coming soon</span>
+          <span><svg class="icon"><use href="#i-check"/></svg>Undone in one click</span>
+        </p>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="orbit o2">
+          <span class="tld"><span>.eu</span></span>
+          <span class="tld"><span>.net</span></span>
+          <span class="tld"><span>.bzh</span></span>
+        </div>
+        <div class="orbit o1">
+          <span class="tld"><span>.fr</span></span>
+          <span class="tld"><span>.org</span></span>
+          <span class="tld"><span>.com</span></span>
+        </div>
+        <div class="halo"></div>
+        <img class="hero-mark" src="../img/offlok-mark.webp" alt="" width="640" height="640">
+        <div class="status-card">
+          <img src="../img/state-on.png" alt="" width="40" height="40">
+          <div>
+            <span class="chip">On</span>
+            <strong>You are your own DNS</strong>
+            <p>OffLok asks the root servers itself, with no one in between.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="dns">
+    <div class="wrap">
+      <div class="split">
+        <div class="prose" data-reveal>
+          <span class="eyebrow">DNS in two minutes</span>
+          <h2>DNS is the internet's address book</h2>
+          <p>On the internet, every site lives at an address made of numbers, such as <code>185.15.58.224</code>. Handy for machines, impossible for us to remember.</p>
+          <p><strong>DNS</strong> (the <em>Domain Name System</em>) makes the link: you type a name, it finds the number. Just like a phone book.</p>
+          <p>It happens hundreds of times a day without you noticing: every site, every app, every picture, every ad and every update starts with a question to the DNS.</p>
+        </div>
+        <div class="lookup" data-reveal aria-label="Example: what happens when you open a site">
+          <div class="urlbar"><svg class="icon"><use href="#i-lock"/></svg>en.wikipedia.org<span class="caret"></span></div>
+          <div class="bubble ask">
+            <span class="who">Your computer</span>
+            <p>What is the address of en.wikipedia.org?</p>
+          </div>
+          <div class="bubble answer">
+            <span class="who">The address book (the DNS)</span>
+            <p>It's <b>185.15.58.224</b>.</p>
+          </div>
+          <div class="done"><svg class="icon"><use href="#i-check"/></svg>The page shows up in the blink of an eye.</div>
+        </div>
+      </div>
+
+      <div class="split who-holds">
+        <figure class="journal" data-reveal>
+          <figcaption><svg class="icon"><use href="#i-eye"/></svg>What your provider's address book receives on an ordinary Tuesday</figcaption>
+          <ol>
+            <li><time>07:42</time><span>www.theguardian.com</span><span class="what">the news</span></li>
+            <li><time>08:15</time><span>www.mayoclinic.org</span><span class="what">a health worry</span></li>
+            <li><time>10:03</time><span>www.indeed.com</span><span class="what">a job search</span></li>
+            <li><time>12:31</time><span>www.paypal.com</span><span class="what">money</span></li>
+            <li><time>19:20</time><span>www.ikea.com</span><span class="what">a purchase</span></li>
+            <li><time>23:48</time><span>www.tinder.com</span><span class="what">a date</span></li>
+          </ol>
+          <p class="note">Made up, but realistic: no need to read your pages to learn a lot about you, the list of names is enough.</p>
+        </figure>
+        <div class="prose" data-reveal>
+          <h3>But who keeps the address book?</h3>
+          <p>Unless you chose otherwise, it is usually <strong>your internet provider</strong>, through your router. Sometimes Google (8.8.8.8) or Cloudflare (1.1.1.1), if someone changed the setting.</p>
+          <p>That address book receives <strong>every question you ask</strong>, one after the other, with the time. And since it is the one answering, it can also decide that a site does not exist, or send you somewhere else.</p>
+          <p>With OffLok, that address book is your own computer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="why" class="alt">
+    <div class="wrap">
+      <div class="head center" data-reveal>
+        <span class="eyebrow">Your DNS at home</span>
+        <h2>What changes when you keep your own address book</h2>
+        <p class="lead">With OffLok, your computer no longer asks a middleman: it finds addresses itself, walking down the DNS tree from its root. Just like its logo shows.</p>
+      </div>
+
+      <div class="compare">
+        <article class="panel before" data-reveal>
+          <div>
+            <span class="tag-before">Without OffLok</span>
+            <h3>One address book gets everything</h3>
+          </div>
+          <div class="flow">
+            <div class="node"><span class="ico"><svg class="icon"><use href="#i-laptop"/></svg></span>Your computer</div>
+            <div class="link"><span class="q">en.wikipedia.org ?</span><span class="q">mayoclinic.org ?</span><span class="q">indeed.com ?</span><span class="q">…</span></div>
+            <div class="node watcher"><span class="ico"><svg class="icon"><use href="#i-building"/></svg></span><span>Your provider's address book<small>or Google's, Cloudflare's…</small></span><span class="eye"><svg class="icon"><use href="#i-eye"/></svg></span></div>
+            <div class="link empty"></div>
+            <div class="node"><span class="ico"><svg class="icon"><use href="#i-globe"/></svg></span>The sites</div>
+          </div>
+          <ul class="notes">
+            <li><svg class="icon"><use href="#i-eye"/></svg>It sees every visit, hour by hour.</li>
+            <li><svg class="icon"><use href="#i-ban"/></svg>It can block a site, or send you elsewhere.</li>
+            <li><svg class="icon"><use href="#i-pulse"/></svg>If it goes down, nothing opens any more.</li>
+          </ul>
+        </article>
+
+        <article class="panel after" data-reveal>
+          <div>
+            <span class="tag-after">With OffLok</span>
+            <h3>Each one only sees its own part</h3>
+          </div>
+          <div class="flow">
+            <div class="node"><span class="ico"><img src="../img/offlok-mark-small.png" alt="" width="30" height="30"></span>Your computer, with OffLok</div>
+            <ol class="steps">
+              <li><div class="step"><span class="ask">“Who handles .org?”</span><span class="to">The root of the internet</span><span class="sees"><svg class="icon"><use href="#i-eye"/></svg>only sees “org”</span></div></li>
+              <li><div class="step"><span class="ask">“Who handles wikipedia.org?”</span><span class="to">The .org registry</span><span class="sees"><svg class="icon"><use href="#i-eye"/></svg>only sees “wikipedia.org”</span></div></li>
+              <li><div class="step"><span class="ask">“What is the address of en.wikipedia.org?”</span><span class="to">Wikipedia's servers</span><span class="sees"><svg class="icon"><use href="#i-eye"/></svg>only see their own site</span></div></li>
+            </ol>
+          </div>
+          <ul class="notes">
+            <li><svg class="icon"><use href="#i-check"/></svg>No one receives the full list of your visits.</li>
+            <li><svg class="icon"><use href="#i-check"/></svg>Answers come from each site's official servers.</li>
+            <li><svg class="icon"><use href="#i-check"/></svg>The first steps are remembered: often, only the last one happens.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="features">
+        <article class="feature" data-reveal>
+          <span class="ico"><svg class="icon"><use href="#i-eye-off"/></svg></span>
+          <h3>Your privacy</h3>
+          <p>No address book receives the list of your visits any more. Each server only learns what it needs to know, and OffLok keeps no record of what you look up.</p>
+        </article>
+        <article class="feature" data-reveal>
+          <span class="ico"><svg class="icon"><use href="#i-compass"/></svg></span>
+          <h3>Your freedom</h3>
+          <p>Answers come from the source, not from a middleman choosing for you what exists. Want to block something? You decide what.</p>
+        </article>
+        <article class="feature" data-reveal>
+          <span class="ico"><svg class="icon"><use href="#i-pulse"/></svg></span>
+          <h3>An internet that stays up</h3>
+          <p>Your address book depends on no company: if your provider's DNS goes down, yours keeps going. And what it has already found stays in memory, even when a server stops answering.</p>
+        </article>
+        <article class="feature" data-reveal>
+          <span class="ico"><svg class="icon"><use href="#i-seal"/></svg></span>
+          <h3>Answers that are checked</h3>
+          <p>When a name is signed (<em>DNSSEC</em>, a kind of digital seal), OffLok checks the seal on your computer and rejects a forged answer.</p>
+        </article>
+        <article class="feature" data-reveal>
+          <span class="ico"><svg class="icon"><use href="#i-ban"/></svg></span>
+          <h3>Fewer ads, if you want</h3>
+          <p>Blocking ads, trackers and malicious sites is included, off at first: one switch per category, a 10-minute pause, and “Trust this site” for one you miss.</p>
+        </article>
+        <article class="feature" data-reveal>
+          <span class="ico"><svg class="icon"><use href="#i-code"/></svg></span>
+          <h3>Free, open, no account</h3>
+          <p>The code is public (MIT licence): anyone can read and check it. No account, no ads, no subscription, no statistics sent.</p>
+        </article>
+      </div>
+
+      <div class="honest" data-reveal>
+        <div>
+          <h3>What OffLok does not do</h3>
+          <p class="sub">We'd rather tell you straight.</p>
+        </div>
+        <ul>
+          <li><svg class="icon"><use href="#i-lock"/></svg><span><strong>It does not encrypt your questions.</strong>Like all classic DNS, they travel in the clear: your provider or the Wi-Fi can still read them as they pass. They just no longer receive them to answer them.</span></li>
+          <li><svg class="icon"><use href="#i-shield"/></svg><span><strong>It is not a VPN.</strong>Sites see your address, and your provider sees which servers you connect to.</span></li>
+          <li><svg class="icon"><use href="#i-pulse"/></svg><span><strong>The first visit is a little slower.</strong>A fraction of a second, the time to walk down the tree. After that, the answer is already on your computer.</span></li>
+          <li><svg class="icon"><use href="#i-user-off"/></svg><span><strong>It does not make you anonymous.</strong>And it changes nothing about the law: what is forbidden stays forbidden.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="head center" data-reveal>
+        <span class="eyebrow">Download</span>
+        <h2>Install OffLok in two minutes</h2>
+        <p class="lead">Version {{VERSION}}, free and without an account. Turn it off or uninstall it whenever you like: your computer then gets exactly its previous settings back.</p>
+      </div>
+
+      <div class="platforms">
+        <article class="platform" data-os="windows" id="windows">
+          <span class="yours">Your system</span>
+          <div class="platform-head">
+            <span class="ico"><svg class="icon"><use href="#i-window"/></svg></span>
+            <div>
+              <h3>Windows</h3>
+              <p>Windows 10 (version 2004 or later) and Windows 11, 64-bit</p>
+            </div>
+          </div>
+          <a class="btn btn-gold btn-block btn-col" href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok-{{VERSION}}-setup.exe">
+            <span class="btn-row"><svg class="icon"><use href="#i-download"/></svg>Download for Windows</span>
+            <span class="file">offlok-{{VERSION}}-setup.exe</span>
+          </a>
+          <ol class="howto">
+            <li>Open the downloaded file.</li>
+            <li>Windows says “Windows protected your PC”? Click <b>More info</b>, then <b>Run anyway</b>.
+              <span class="why">That's expected for now: OffLok does not have a signature Windows recognises yet. It is on its way (see the questions below).</span></li>
+            <li>Accept the permission prompt, then follow the installer: it explains what OffLok changes, and lets you turn off the update check.</li>
+            <li>Done: OffLok's icon appears next to the clock. Can't see it? It may be hiding under the small <kbd>^</kbd> arrow.</li>
+          </ol>
+        </article>
+
+        <article class="platform" data-os="linux" id="linux">
+          <span class="yours">Your system</span>
+          <div class="platform-head">
+            <span class="ico"><svg class="icon"><use href="#i-terminal"/></svg></span>
+            <div>
+              <h3>Linux</h3>
+              <p>64-bit PC (Intel or AMD). Tested on Ubuntu 24.04.</p>
+            </div>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Your distribution">
+            <button type="button" role="tab" id="tab-deb" aria-controls="panel-deb" aria-selected="true">Ubuntu, Debian, Mint…</button>
+            <button type="button" role="tab" id="tab-rpm" aria-controls="panel-rpm" aria-selected="false" tabindex="-1">Fedora…</button>
+          </div>
+          <div class="tab-panel" id="panel-deb" role="tabpanel" aria-labelledby="tab-deb">
+            <p class="tab-title">Ubuntu, Debian, Linux Mint… (.deb packages)</p>
+            <div class="pkgs">
+              <a class="btn btn-gold btn-col pkg" href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok_{{VERSION}}_amd64.deb"><span class="btn-row"><svg class="icon"><use href="#i-download"/></svg>OffLok</span><span class="file">the engine</span></a>
+              <a class="btn btn-gold btn-col pkg" href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok-desktop_{{VERSION}}_amd64.deb"><span class="btn-row"><svg class="icon"><use href="#i-download"/></svg>OffLok desktop</span><span class="file">the icon and its window</span></a>
+            </div>
+            <ol class="howto">
+              <li>Download both packages.</li>
+              <li>Open a terminal (<kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>T</kbd> on Ubuntu), paste these two lines and press <kbd>Enter</kbd>:
+                <div class="code"><pre>cd "$(xdg-user-dir DOWNLOAD)"
+sudo apt install ./offlok_{{VERSION}}_amd64.deb ./offlok-desktop_{{VERSION}}_amd64.deb</pre><button type="button" class="copy" aria-label="Copy"><svg class="icon copy-ico"><use href="#i-copy"/></svg><svg class="icon ok"><use href="#i-check"/></svg></button></div></li>
+              <li>Type your password. OffLok starts right away; its icon appears at your next login, or as soon as you open “OffLok” from your applications.</li>
+            </ol>
+          </div>
+          <div class="tab-panel" id="panel-rpm" role="tabpanel" aria-labelledby="tab-rpm">
+            <p class="tab-title">Fedora and its relatives (.rpm packages)</p>
+            <div class="pkgs">
+              <a class="btn btn-gold btn-col pkg" href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok-{{VERSION}}-1.x86_64.rpm"><span class="btn-row"><svg class="icon"><use href="#i-download"/></svg>OffLok</span><span class="file">the engine</span></a>
+              <a class="btn btn-gold btn-col pkg" href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok-desktop-{{VERSION}}-1.x86_64.rpm"><span class="btn-row"><svg class="icon"><use href="#i-download"/></svg>OffLok desktop</span><span class="file">the icon and its window</span></a>
+            </div>
+            <ol class="howto">
+              <li>Download both packages.</li>
+              <li>Open a terminal, paste these two lines and press <kbd>Enter</kbd>:
+                <div class="code"><pre>cd "$(xdg-user-dir DOWNLOAD)"
+sudo dnf install ./offlok-{{VERSION}}-1.x86_64.rpm ./offlok-desktop-{{VERSION}}-1.x86_64.rpm</pre><button type="button" class="copy" aria-label="Copy"><svg class="icon copy-ico"><use href="#i-copy"/></svg><svg class="icon ok"><use href="#i-check"/></svg></button></div></li>
+              <li>Type your password. OffLok starts right away; its icon appears at your next login, or as soon as you open “OffLok” from your applications.</li>
+            </ol>
+          </div>
+        </article>
+
+        <div class="soon-row">
+          <article class="soon" data-os="mac">
+            <span class="yours">Your system</span>
+            <span class="ico"><svg class="icon"><use href="#i-laptop"/></svg></span>
+            <div>
+              <h3>Mac <span class="chip">in the works</span></h3>
+              <p>OffLok comes to the Mac right after Windows and Linux.</p>
+            </div>
+          </article>
+          <article class="soon" data-os="mobile">
+            <span class="yours">Your system</span>
+            <span class="ico"><svg class="icon"><use href="#i-phone"/></svg></span>
+            <div>
+              <h3>Android and iPhone <span class="chip">later</span></h3>
+              <p>Phones come next. For now, OffLok installs on a computer.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="more">
+        <p>64-bit ARM computers (without the window), earlier versions and release notes: <a href="https://github.com/LokLakh-s/OffLok/releases">it's all on GitHub</a>.</p>
+        <details class="verify">
+          <summary><svg class="icon"><use href="#i-seal"/></svg>Check what you downloaded (optional, for the curious)</summary>
+          <div class="body">
+            <p>Every release comes with a <code>SHA256SUMS</code> file, signed with OffLok's release key (<a href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok-release-45e724ba.pub.pem">offlok-release-45e724ba.pub.pem</a>, Ed25519). Download <a href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/SHA256SUMS">SHA256SUMS</a> and <a href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/SHA256SUMS.sig">SHA256SUMS.sig</a> next to your files, then, with OpenSSL 3:</p>
+            <div class="code"><pre>openssl pkeyutl -verify -pubin -inkey offlok-release-45e724ba.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+sha256sum --ignore-missing -c SHA256SUMS</pre><button type="button" class="copy" aria-label="Copy"><svg class="icon copy-ico"><use href="#i-copy"/></svg><svg class="icon ok"><use href="#i-check"/></svg></button></div>
+            <p>Automatic updates do this check by themselves: an update installs only if its signature is right.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section id="daily" class="alt">
+    <div class="wrap daily">
+      <div data-reveal>
+        <div class="app-frame">
+          <picture>
+            <source srcset="../img/app-en-dark.webp" media="(prefers-color-scheme: dark)">
+            <img src="../img/app-en-light.webp" alt="OffLok's window: “You are your own DNS”, the main switch, and blocking of ads, trackers and malicious sites." width="880" height="1474" loading="lazy">
+          </picture>
+        </div>
+        <p class="app-caption">OffLok's window, one click on its icon away.</p>
+      </div>
+      <div>
+        <div class="head" data-reveal>
+          <span class="eyebrow">Every day</span>
+          <h2>Once installed, there's nothing left to do</h2>
+          <p class="lead">OffLok starts with your computer and works quietly. Its icon, next to the clock, tells you how it's doing.</p>
+        </div>
+        <ul class="states" data-reveal>
+          <li><img src="../img/state-on.png" alt="" width="48" height="48"><div><strong>All good</strong><p>Your computer finds addresses itself, from the root.</p></div></li>
+          <li><img src="../img/state-fallback.png" alt="" width="48" height="48"><div><strong>Orange dot: fallback</strong><p>The root servers don't answer from here (a hotel's Wi-Fi, an office network). OffLok goes through the network's DNS until they're back: reduced protection, but the internet works.</p></div></li>
+          <li><img src="../img/state-error.png" alt="" width="48" height="48"><div><strong>Red dot: a problem</strong><p>Your original settings are put back at once, and OffLok tries again a minute later.</p></div></li>
+          <li><img src="../img/state-off.png" alt="" width="48" height="48"><div><strong>Greyed out: off</strong><p>Your computer uses its original DNS again.</p></div></li>
+        </ul>
+        <div class="tips" data-reveal>
+          <div class="tip">
+            <svg class="icon"><use href="#i-wifi"/></svg>
+            <strong>Never through a network's DNS?</strong>
+            <p>Turn on <b>strict mode</b>. On a hotel's or a station's Wi-Fi, “Sign in to this network” opens the door for 5 minutes, the time of its sign-in page.</p>
+          </div>
+          <div class="tip">
+            <svg class="icon"><use href="#i-undo"/></svg>
+            <strong>Never a broken internet</strong>
+            <p>Every change is tested. At the slightest failure, OffLok puts your original settings back by itself.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="history">
+    <div class="wrap">
+      <div class="head center" data-reveal>
+        <span class="eyebrow">A bit of history</span>
+        <h2>A short history of the internet's address book</h2>
+        <p class="lead">DNS is more than forty years old. Its history shows why whoever keeps the address book matters so much.</p>
+      </div>
+      <ol class="timeline">
+        <li data-reveal><span class="year">1970s</span><span class="dot"></span><div>
+          <h3>One file for the whole network</h3>
+          <p>In the days of ARPANET, the internet's ancestor, the list of names and addresses fits in a single file, <code>HOSTS.TXT</code>, kept up to date at SRI in California and copied by every computer. The bigger the network grows, the less that works.</p>
+        </div></li>
+        <li data-reveal><span class="year">1983</span><span class="dot"></span><div>
+          <h3>DNS is born, shaped like a tree</h3>
+          <p>Paul Mockapetris, at the University of Southern California's Information Sciences Institute, invents DNS (RFC 882 and 883, November 1983): an address book spread out as a tree. At the top the root, then <code>.com</code>, <code>.org</code>, <code>.fr</code>…, each branch kept by someone else. That is the tree OffLok's logo draws.</p>
+        </div></li>
+        <li data-reveal><span class="year">1987</span><span class="dot"></span><div>
+          <h3>Today's rules</h3>
+          <p>RFC 1034 and 1035 set DNS down as we still use it, nearly forty years later.</p>
+        </div></li>
+        <li data-reveal><span class="year">2008</span><span class="dot"></span><div>
+          <h3>The Kaminsky flaw, and Unbound</h3>
+          <p>Researcher Dan Kaminsky finds that fake answers can be slipped into address books, sending their users to fake sites. On 8 July 2008, vendors around the world release a fix together. The same year, the Dutch foundation NLnet Labs releases <strong>Unbound</strong>, the free address book OffLok runs on your computer.</p>
+        </div></li>
+        <li data-reveal><span class="year">2009</span><span class="dot"></span><div>
+          <h3>The giants step in</h3>
+          <p>Google launches its public address book, 8.8.8.8, on 3 December 2009; Cloudflare follows with 1.1.1.1 on 1 April 2018. Fast and handy, but millions of people's questions end up with a handful of companies.</p>
+        </div></li>
+        <li data-reveal><span class="year">2010</span><span class="dot"></span><div>
+          <h3>A seal on the root</h3>
+          <p>On 15 July 2010, the root is signed (<em>DNSSEC</em>): an answer can now be checked, like a wax seal, all the way to the top of the tree. OffLok does that check itself.</p>
+        </div></li>
+        <li data-reveal><span class="year">2016</span><span class="dot"></span><div>
+          <h3>Google “blocked for terrorism”… by mistake</h3>
+          <p>On 17 October 2016, for about an hour, customers of the French provider Orange trying to open google.fr, Wikipedia or OVH land on the French Interior Ministry's page for terrorist sites. A human error in Orange's address book, which shows that whoever keeps the address book decides what you see.</p>
+        </div></li>
+        <li data-reveal><span class="year">2016</span><span class="dot"></span><div>
+          <h3>Only say what's needed</h3>
+          <p>Stéphane Bortzmeyer, of Afnic (which runs <code>.fr</code>), publishes query “minimisation” (RFC 7816, March 2016): ask each server only what it needs to know. OffLok uses it: the root only sees “org”, not the whole site.</p>
+        </div></li>
+        <li data-reveal><span class="year">2024</span><span class="dot"></span><div>
+          <h3>Public address books filtered in turn</h3>
+          <p>At Canal+'s request, French courts order Google, Cloudflare and Cisco to block, in their public address books, sites streaming sport illegally; Cisco chooses to shut down its OpenDNS service in France. Whatever goes through an address book can be filtered by it.</p>
+        </div></li>
+        <li class="now" data-reveal><span class="year">2026</span><span class="dot"></span><div>
+          <h3>A new key for the root, and OffLok</h3>
+          <p>On 11 October 2026, the root changes its signing key, for the second time in its history. On 30 October, OffLok 0.5.0 comes out as free software: the DNS tree, walked by your own computer, from a root copied in more than 2,000 places around the world.</p>
+        </div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="faq" class="alt">
+    <div class="wrap">
+      <div class="head center" data-reveal>
+        <span class="eyebrow">Questions</span>
+        <h2>You may be wondering…</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Could it break my internet?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>No. Every change is tested; at the slightest failure, OffLok puts your original settings back by itself and tries again a minute later. Turning it off or uninstalling it leaves your computer exactly as before.</p></div>
+        </details>
+        <details>
+          <summary>Does it slow down my connection?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>The first visit to a site takes a fraction of a second longer, the time to walk down the tree from the root. After that, the answer is kept on your computer: it comes at once, without even going over the network.</p></div>
+        </details>
+        <details>
+          <summary>Can my internet provider still see anything?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>It no longer receives your questions to answer them, but they travel in the clear over its network: it could read them as they pass, just as it sees the addresses of the servers you connect to. OffLok removes the middleman, not the pipe.</p><p>To hide the pipe too, you need a VPN or Tor, which are other tools.</p></div>
+        </details>
+        <details>
+          <summary>What about a hotel's or a station's Wi-Fi?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>These networks often block direct access to the root, or ask you to sign in on a page. OffLok then goes through the network's DNS until it can come back (the icon with an orange dot).</p><p>Would you rather never go through it? Turn on strict mode: “Sign in to this network” opens the door for 5 minutes, the time of the sign-in page. You can also set an encrypted fallback resolver (DNS over TLS), used before the network's DNS.</p></div>
+        </details>
+        <details>
+          <summary>Does it block ads?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>If you want. Blocking is included but off at first, with four switches: ads, trackers, malicious sites (phishing, scams) and your own lists. The lists come from their authors (AdGuard, HaGeZi, URLhaus and others), downloaded once a day by your computer.</p><p>A site stopped working? “Check” tells you whether it is blocked and by which list, and “Trust this site” unblocks it for good.</p></div>
+        </details>
+        <details>
+          <summary>It's free? What's the catch?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>No catch: OffLok is free software (MIT licence). Its code is public; no account, no ads, no subscription, and it sends no statistics.</p><p>What it contacts, besides DNS servers: the blocking lists you switch on, and GitHub once a day to see whether there is a new version. That last check can be turned off with a switch.</p></div>
+        </details>
+        <details>
+          <summary>Why does Windows warn me during installation?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>Windows is wary of programs without a signature it recognises. A free signature for open-source software (SignPath Foundation) is being prepared for OffLok. Meanwhile, the installer is built in public by GitHub from the published code, and you can check it was not altered (see “Check what you downloaded”).</p></div>
+        </details>
+        <details>
+          <summary>Is it legal?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>Yes. Running your own DNS address book is perfectly normal: companies, universities and internet providers do exactly the same. OffLok does not make you anonymous and changes nothing about the law: what is forbidden stays forbidden.</p></div>
+        </details>
+        <details>
+          <summary>How do I uninstall it?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>On Windows: <b>Settings › Apps › Installed apps</b>, then OffLok › <b>Uninstall</b>. On Linux: <code>sudo apt remove offlok offlok-desktop</code> (or <code>sudo dnf remove</code> on Fedora).</p><p>Either way, every connection of your computer gets its original DNS back.</p></div>
+        </details>
+        <details>
+          <summary>Who makes OffLok?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>OffLok is developed by LokLakh and published as free software: anyone can read its code, check it and suggest improvements <a href="https://github.com/LokLakh-s/OffLok">on GitHub</a>. It relies on Unbound, the free address book from the NLnet Labs foundation.</p></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <div class="final-card" data-reveal>
+        <img src="../img/offlok-mark.webp" alt="" width="640" height="640" loading="lazy">
+        <div>
+          <h2>Ready to be your own DNS?</h2>
+          <p>Free, open source, no account. And reversible at any time.</p>
+        </div>
+        <div class="cta">
+          <a class="btn btn-gold" href="#download"><svg class="icon"><use href="#i-download"/></svg>Download OffLok</a>
+          <a class="btn btn-ghost" href="https://github.com/LokLakh-s/OffLok"><svg class="icon"><use href="#i-code"/></svg>See the code</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a class="brand" href="#top"><img src="../img/offlok-mark-small.png" alt="" width="34" height="34">OffLok</a>
+        <p>Your computer, its own DNS. Free software under the MIT licence, by LokLakh.</p>
+      </div>
+      <div>
+        <h4>The project</h4>
+        <ul>
+          <li><a href="https://github.com/LokLakh-s/OffLok">Source code</a></li>
+          <li><a href="https://github.com/LokLakh-s/OffLok/releases">All releases</a></li>
+          <li><a href="https://github.com/LokLakh-s/OffLok/blob/main/docs/ROADMAP.md">Roadmap</a></li>
+          <li><a href="https://github.com/LokLakh-s/OffLok/issues">Report a problem</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>This site</h4>
+        <ul>
+          <li>No cookies, no audience tracking, nothing loaded from elsewhere.</li>
+          <li><a href="../" hreflang="fr" lang="fr">Version française</a></li>
+          <li><a href="mailto:contact@loklakh.fr">contact@loklakh.fr</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 LokLakh · OffLok relies on <a href="https://nlnetlabs.nl/projects/unbound/about/">Unbound</a>, by NLnet Labs</span>
+      <span>Outfit typeface, under the SIL Open Font Licence</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
