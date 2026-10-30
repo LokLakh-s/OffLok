@@ -1,7 +1,8 @@
-# OffLok on macOS, on one of GitHub's macOS 26 machines (Apple silicon): vet and the tests, then offlokd and offlok
-# built there, installed with Homebrew's Unbound, and test/macos/test.sh (the launchd service, every network
-# service's DNS, DNSSEC, blocking, a crash, the fallback and strict mode behind pf, the uninstall). Apart from the CI
-# (which takes 25 minutes on Linux first): this needs none of it.
+# OffLok on macOS, on one of GitHub's macOS 26 machines (Apple silicon): vet and the tests (the menu bar app's
+# included), Unbound built with OpenSSL (packaging/macos/build-unbound.sh, OpenSSL's libraries kept between runs),
+# the package (build-pkg.sh), then test/macos/test.sh installs it as a user would and checks the launchd service,
+# the menu bar app, every network service's DNS, DNSSEC, blocking, a crash, the fallback and strict mode behind pf,
+# and the uninstall. Apart from the CI (which takes 25 minutes on Linux first): this needs none of it.
 name: macOS
 
 on:
@@ -20,7 +21,7 @@ permissions:
 jobs:
   macos:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -32,14 +33,29 @@ jobs:
         run: |
           go vet ./...
           go test -count=1 -timeout 5m ./...
+          (cd desktop && go vet .)
 
-      - name: offlokd and offlok
-        run: |
-          go build -trimpath -o bin/darwin/offlokd ./cmd/offlokd
-          go build -trimpath -o bin/darwin/offlok ./cmd/offlok
+      - name: OpenSSL's libraries, kept between runs of the same sources
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            bin/darwin/unbound-build/openssl-*-arm64
+            bin/darwin/unbound-build/openssl-*-x86_64
+            bin/darwin/unbound-build/*.tar.gz
+          key: macos-openssl-${{ hashFiles('packaging/macos/sources.env', 'packaging/macos/build-unbound.sh') }}
 
-      - name: Homebrew's Unbound
-        run: brew install unbound
+      - name: Unbound, with OpenSSL linked in
+        run: ./packaging/macos/build-unbound.sh
+
+      - name: The package
+        run: ./packaging/macos/build-pkg.sh
+
+      - name: Keep the package a day (to try it on a Mac)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-package
+          path: dist/offlok-*.pkg
+          retention-days: 1
 
       - name: Install, check, uninstall
         run: ./test/macos/test.sh
@@ -48,3 +64,4 @@ jobs:
         if: failure()
         run: |
           sudo cat "/Library/Application Support/OffLok/offlokd.log" "/Library/Application Support/OffLok/offlokd.err" 2>/dev/null | tail -100 || true
+          cat /var/log/install.log 2>/dev/null | grep -i offlok | tail -40 || true

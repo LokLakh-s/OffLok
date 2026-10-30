@@ -1,0 +1,19 @@
+#!/bin/sh
+# After install or upgrade: launchd starts offlokd (on an upgrade, again on the new program), then the menu bar app
+# for whoever is logged in; on a first install, with its window open.
+first=yes
+[ -e /Library/LaunchDaemons/org.loklakh.offlokd.plist ] && first=no
+/usr/local/libexec/offlok/offlokd install || exit 1
+user=$(stat -f %Su /dev/console)
+case "$user" in
+"" | root | loginwindow) exit 0 ;;
+esac
+uid=$(id -u "$user")
+launchctl bootout "gui/$uid/org.loklakh.offlok.desktop" 2>/dev/null
+launchctl bootstrap "gui/$uid" /Library/LaunchAgents/org.loklakh.offlok.desktop.plist 2>/dev/null
+if [ "$first" = yes ]; then
+	# A second launch shows the running one's window.
+	sleep 2
+	launchctl asuser "$uid" sudo -u "$user" /usr/bin/open -a /Applications/OffLok.app
+fi
+exit 0

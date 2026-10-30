@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><style>body { font: 13px -apple-system, sans-serif; line-height: 1.45; } h1 { font-size: 17px; } li { margin: 4px 0; }</style></head>
+<body>
+<h1>Ton Mac devient son propre DNS</h1>
+<p>OffLok cherche lui-même l'adresse de chaque nom, en partant des serveurs racine d'Internet : plus de fournisseur d'accès, de Google ou de Cloudflare au milieu.</p>
+<ul>
+<li><b>Ce qu'il change :</b> le DNS de chaque service réseau de ce Mac (Wi-Fi, Ethernet…) pointe sur OffLok lui-même (127.0.0.1 et ::1). Le réglage d'origine de chacun est gardé : éteindre ou désinstaller OffLok le rend.</li>
+<li><b>Ce qu'il envoie :</b> une fois par jour, il cherche une nouvelle version sur GitHub, qui voit alors l'adresse de ce Mac (tu peux le couper dans la fenêtre d'OffLok). La signature d'une mise à jour est vérifiée avant son installation. Rien d'autre ne sort de ce Mac : ni statistiques, ni trace de ce que tu cherches.</li>
+<li><b>Où le trouver :</b> son icône dans la barre des menus ouvre sa fenêtre.</li>
+<li><b>Pour le désinstaller :</b> dans le Terminal, <code>sudo /usr/local/libexec/offlok/uninstall.sh</code></li>
+</ul>
+<p>Logiciel libre sous licence MIT : <a href="https://offlok.org/">offlok.org</a></p>
+</body>
+</html>

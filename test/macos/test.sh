@@ -1,8 +1,8 @@
 #!/bin/bash
-# OffLok's macOS test, on a disposable Mac (GitHub's macOS runner, where sudo asks no password): installs offlokd
-# and offlok from bin/darwin/ with Homebrew's Unbound, checks the launchd service, every network service's DNS,
-# DNSSEC and the blocking, kills offlokd, cuts the root servers off (pf) for the fallback and strict mode, then
-# uninstalls and checks that every network service has its original DNS back.
+# OffLok's macOS test, on a disposable Mac (GitHub's macOS runner, where sudo asks no password): installs
+# dist/offlok-<version>.pkg as a user would, checks the launchd service, the menu bar app, every network service's
+# DNS, DNSSEC and the blocking, kills offlokd, cuts the root servers off (pf) for the fallback and strict mode, then
+# uninstalls with the package's script and checks that every network service has its original DNS back.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -79,18 +79,22 @@ check_names_list() { "$offlok" check doubleclick.net | grep -q 'AdGuard DNS filt
 offlokd_runs() { pgrep -x offlokd >/dev/null; }
 resolves_through_network() { dig @127.0.0.1 +short example.org A | grep -Eq '^[0-9.]+$'; }
 no_account() { ! id _offlok >/dev/null 2>&1; }
+pkg_registered() { pkgutil --pkgs | grep -qx org.loklakh.offlok; }
+unbound_is_packaged() { unbounds | grep -qF "$libexec/unbound/unbound -d -c"; }
+app_runs() { pgrep -x offlok-desktop >/dev/null; }
+no_programs() { [ ! -e "$libexec" ] && [ ! -e "$offlok" ] && [ ! -e /Applications/OffLok.app ] && ! pkg_registered; }
 no_files() { [ ! -e "/Library/Application Support/OffLok" ] && [ ! -e /Library/LaunchDaemons/org.loklakh.offlokd.plist ]; }
 
 before=$(dns_snapshot)
 echo "# DNS before:"
 echo "$before"
 
-sudo install -d "$libexec" /usr/local/bin
-sudo install -m 755 bin/darwin/offlokd "$libexec/offlokd"
-sudo install -m 755 bin/darwin/offlok "$offlok"
-sudo "$libexec/offlokd" install
+pkg=$(ls dist/offlok-*.pkg | head -1)
+sudo installer -pkg "$pkg" -target / || exit 1
 
 check 'launchd runs offlokd' launchd_runs
+check 'the package is registered' pkg_registered
+check "Unbound is the package's own" unbound_is_packaged
 check "Unbound's hidden account exists" id _offlok
 check 'resolves by itself, or falls back on this network' wait_until 60 status_is 'On|Fallback'
 echo "# $("$offlok" status | tr '\n' '|')"
@@ -105,6 +109,13 @@ echo "# DNS sockets:"
 sudo lsof -nP -iUDP:53 -iTCP:53 -sTCP:LISTEN | tail -n +2
 check 'OffLok answers DNS on the loopback only' loopback_only
 check 'Unbound runs as _offlok' unbound_user_is _offlok
+
+# The menu bar app, started for the logged-in user by the package (or by hand when no one is).
+if ! app_runs; then
+	open -a /Applications/OffLok.app --args --hidden
+fi
+sleep 8
+check 'the menu bar app starts and stays up' app_runs
 
 sudo "$offlok" block ads on >/dev/null
 check 'ads: the list is downloaded' wait_until 90 ads_downloaded
@@ -134,11 +145,13 @@ sudo pfctl -q -f /etc/pf.conf
 [ -n "$token" ] && sudo pfctl -q -X "$token"
 check 'the root back: resolves by itself again' wait_until 120 status_is 'On'
 
-sudo "$libexec/offlokd" uninstall
+sudo "$libexec/uninstall.sh"
 check 'uninstall takes offlokd out of launchd' launchd_has_none
 check 'unbound is gone' unbound_count_is 0
 check "Unbound's account is gone" no_account
 check "OffLok's files are gone" no_files
+check "OffLok's programs are gone" no_programs
+check 'the menu bar app is gone' bash -c '! pgrep -x offlok-desktop >/dev/null'
 after=$(dns_snapshot)
 echo "# DNS after:"
 echo "$after"

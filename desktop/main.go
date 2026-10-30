@@ -1,5 +1,6 @@
 // offlok-desktop is OffLok's tray icon and window. It holds no rights of its own: it asks offlokd over the local
-// socket, and offlokd has polkit ask for the administrator's password when a setting needs it.
+// socket; when a setting needs an administrator, polkit asks for the password on Linux, and the app runs the
+// command again elevated on Windows (UAC) and macOS (its password prompt).
 package main
 
 import (
@@ -81,7 +82,8 @@ func (a *App) OpenNotes() Result {
 func (a *App) Status() Result { return a.call(ipc.Request{Cmd: "status"}) }
 
 // Send runs one of offlokd's commands. It is interactive: on Linux, offlokd may have polkit ask for the password;
-// on Windows, a refusal makes the app run the command again elevated, through UAC.
+// on Windows and macOS, a refusal makes the app run the command again as an administrator, through UAC or macOS's
+// password prompt.
 func (a *App) Send(cmd, value string) Result {
 	r := a.call(ipc.Request{Cmd: cmd, Value: value, Interactive: true})
 	if !r.Denied {
@@ -183,9 +185,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// On Windows, the window is a flyout out of the tray icon, as Windows's own (network, sound): no frame and no
-	// taskbar button, above the other windows, gone when it loses the focus. Elsewhere, a window of its own.
-	flyout := runtime.GOOS == "windows"
+	// On Windows and macOS, the window is a flyout out of the tray icon (the menu bar's, on a Mac), as their own
+	// (network, sound): no frame and no taskbar button, above the other windows, gone when it loses the focus. On
+	// Linux, a window of its own.
+	flyout := runtime.GOOS == "windows" || runtime.GOOS == "darwin"
 
 	var window *application.WebviewWindow
 	var tray *application.SystemTray
