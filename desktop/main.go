@@ -11,9 +11,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/loklakh-s/offlok/internal/daemon"
@@ -52,7 +54,12 @@ type Result struct {
 // App is the Go service the window calls: main.App.Status, main.App.Send and main.App.OpenNotes.
 type App struct {
 	socket string
+	// elevated runs once Windows's prompt (UAC) is gone, which took the focus: the flyout comes back.
+	elevated func()
 }
+
+// elevating is set while UAC's prompt is up: losing the focus to it does not close the flyout.
+var elevating atomic.Bool
 
 // notesPrefix is the only place OpenNotes opens: OffLok's release pages.
 const notesPrefix = "https://github.com/LokLakh-s/OffLok/releases/tag/v"
@@ -80,7 +87,13 @@ func (a *App) Send(cmd, value string) Result {
 	if !r.Denied {
 		return r
 	}
-	switch err := elevate(cmd, value); {
+	elevating.Store(true)
+	err := elevate(cmd, value)
+	elevating.Store(false)
+	if a.elevated != nil && !errors.Is(err, errors.ErrUnsupported) {
+		a.elevated()
+	}
+	switch {
 	case err == nil:
 		return a.Status()
 	case errors.Is(err, errors.ErrUnsupported), errors.Is(err, errCancelled):
@@ -164,32 +177,47 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// The window's and the taskbar's icon. Wails looks for it in the program's resources as number 3, where
+	// go-winres puts it as number 1: given here, it is there everywhere.
+	appIcon, err := frontend.ReadFile("frontend/img/offlok-mark.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// On Windows, the window is a flyout out of the tray icon, as Windows's own (network, sound): no frame and no
+	// taskbar button, above the other windows, gone when it loses the focus. Elsewhere, a window of its own.
+	flyout := runtime.GOOS == "windows"
 
 	var window *application.WebviewWindow
+	var tray *application.SystemTray
 	var mu sync.Mutex
+	// show opens the window, next to the tray icon when it is a flyout.
+	show := func() {
+		mu.Lock()
+		defer mu.Unlock()
+		switch {
+		case flyout && tray != nil:
+			tray.ShowWindow()
+		case window != nil:
+			window.Show()
+			window.Focus()
+		}
+	}
 	app := application.New(application.Options{
 		Name:        "OffLok",
 		Description: "Your computer as its own DNS resolver",
+		Icon:        appIcon,
 		Services:    []application.Service{application.NewService(svc)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: "org.loklakh.offlok.desktop",
 			// Opening OffLok from the menu while the tray runs shows the running one's window.
-			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
-				mu.Lock()
-				defer mu.Unlock()
-				if window != nil {
-					window.Show()
-					window.Focus()
-				}
-			},
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) { show() },
 		},
 		Linux: application.LinuxOptions{ProgramName: "offlok"},
 		Mac:   application.MacOptions{ActivationPolicy: application.ActivationPolicyAccessory},
 	})
 
-	mu.Lock()
-	window = app.Window.NewWithOptions(application.WebviewWindowOptions{
+	options := application.WebviewWindowOptions{
 		Name:          "offlok",
 		Title:         "OffLok",
 		Width:         440,
@@ -200,26 +228,63 @@ func main() {
 		URL:           "/",
 		HideOnEscape:  true,
 		DisableResize: false,
-	})
+	}
+	if flyout {
+		options.Frameless = true
+		options.AlwaysOnTop = true
+		options.DisableResize = true
+		options.Height = 640
+		options.Hidden = true // shown next to the tray icon once the app runs
+		options.Windows.HiddenOnTaskbar = true
+	}
+	mu.Lock()
+	window = app.Window.NewWithOptions(options)
 	mu.Unlock()
 	// Closing the window keeps the tray: OffLok's service runs on regardless.
 	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		window.Hide()
 		e.Cancel()
 	})
+	// The flyout closes when the focus goes elsewhere, except to UAC's prompt for one of its own settings. The
+	// click on the tray icon that took the focus away must not open it again at once.
+	var closedAt atomic.Int64
+	if flyout {
+		window.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
+			if !elevating.Load() && window.IsVisible() {
+				window.Hide()
+				closedAt.Store(time.Now().UnixNano())
+			}
+		})
+	}
 
-	tray := app.SystemTray.New()
+	mu.Lock()
+	tray = app.SystemTray.New()
+	mu.Unlock()
 	tray.SetIcon(icon("off"))
 	tray.SetTooltip("OffLok")
 	menu := app.NewMenu()
-	menu.Add(i18n.T(lang, "tray.open")).OnClick(func(*application.Context) {
-		window.Show()
-		window.Focus()
-	})
+	menu.Add(i18n.T(lang, "tray.open")).OnClick(func(*application.Context) { show() })
 	menu.AddSeparator()
 	menu.Add(i18n.T(lang, "tray.quit")).OnClick(func(*application.Context) { app.Quit() })
 	tray.SetMenu(menu)
-	tray.AttachWindow(window).WindowOffset(6)
+	tray.AttachWindow(window).WindowOffset(12)
+	tray.OnClick(func() {
+		switch {
+		case window.IsVisible():
+			window.Hide()
+		case time.Since(time.Unix(0, closedAt.Load())) < 400*time.Millisecond:
+		default:
+			show()
+		}
+	})
+	svc.elevated = func() {
+		if flyout {
+			show()
+		}
+	}
+	if flyout && !*hidden {
+		app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { show() })
+	}
 
 	go func() {
 		last := ""
