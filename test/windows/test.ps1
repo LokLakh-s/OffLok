@@ -52,8 +52,9 @@ Check 'Unbound runs next to offlokd' { [bool](Get-Process unbound -ErrorAction S
 
 & $offlok block ads on | Out-Null
 Check 'ads: the list is downloaded' { Wait-Until 90 { (& $offlok status) -match 'ads \(\d{5,} names\)' } }
+# The list counts once downloaded; it blocks once compiled, a moment later.
 Check 'ads: doubleclick.net is blocked' {
-    (Resolve-DnsName doubleclick.net -Type A -Server 127.0.0.1 -DnsOnly).IPAddress -contains '0.0.0.0'
+    Wait-Until 15 { (Resolve-DnsName doubleclick.net -Type A -Server 127.0.0.1 -DnsOnly).IPAddress -contains '0.0.0.0' }
 }
 Check 'check names the list' { (& $offlok check doubleclick.net) -match 'AdGuard DNS filter' }
 & $offlok block ads off | Out-Null

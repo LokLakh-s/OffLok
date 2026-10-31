@@ -75,7 +75,8 @@ is_blocked() { dig @127.0.0.1 +short "$1" A | grep -qx 0.0.0.0; }
 check "blocking is off at first" not_blocked doubleclick.net
 offlok block ads on >/dev/null
 check "ads: the list is downloaded" sh -c 'for i in $(seq 90); do offlok | grep -qE "(ads|pubs) \([0-9]{5,} names\)" && exit 0; sleep 1; done; exit 1'
-check "ads: doubleclick.net is blocked" is_blocked doubleclick.net
+# The list counts once downloaded; it blocks once compiled, a moment later.
+check "ads: doubleclick.net is blocked" sh -c 'for i in $(seq 15); do dig @127.0.0.1 +short doubleclick.net A | grep -qx 0.0.0.0 && exit 0; sleep 1; done; exit 1'
 check "ads: and what is under it" sh -c 'dig @127.0.0.1 +short stats.g.doubleclick.net AAAA | grep -qx ::'
 check "ads: through the system too" sh -c 'getent ahostsv4 doubleclick.net | grep -q "^0\.0\.0\.0"'
 check "ads: other sites still answer" not_blocked nlnetlabs.nl

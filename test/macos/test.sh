@@ -82,7 +82,8 @@ check 'the menu bar app starts and stays up' app_runs
 
 sudo "$offlok" block ads on >/dev/null
 check 'ads: the list is downloaded' wait_until 90 ads_downloaded
-check 'ads: doubleclick.net is blocked' blocked doubleclick.net
+# The list counts once downloaded; it blocks once compiled, a moment later.
+check 'ads: doubleclick.net is blocked' wait_until 15 blocked doubleclick.net
 check 'check names the list' check_names_list
 sudo "$offlok" block ads off >/dev/null
 
