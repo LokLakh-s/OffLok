@@ -83,6 +83,15 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 
 - [ ] launchd daemon, DNS per network service, Homebrew tap, unsigned `.pkg`
 
-## 7. Later
+## 7. Android
 
-- [ ] Android (local VPN), iOS (Network Extension), Apple Developer account, signed `.pkg`
+- [ ] The Go core on Android: an Android backend (the tunnel as the system DNS), Unbound as libunbound, the
+      tunnel's UDP queries answered by the front
+- [ ] The app: a foreground `VpnService`, the computers' window in a WebView, a Quick Settings tile, the Private DNS
+      warning
+- [ ] Emulator tests on GitHub's runners, then real phones
+- [ ] One release key; the APK on GitHub Releases; F-Droid (reproducible build) and IzzyOnDroid; Google Play
+
+## 8. Later
+
+- [ ] iOS (Network Extension), Apple Developer account, signed `.pkg`
