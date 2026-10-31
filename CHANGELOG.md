@@ -2,6 +2,17 @@
 
 What changes from one OffLok release to the next. Each release's notes on GitHub start with its section here.
 
+## 0.6.0
+
+- **macOS**, 13 or later, Apple silicon and Intel: `offlok-0.6.0.pkg` installs offlokd under launchd, Unbound
+  1.26.2 built with OpenSSL 3.5.9, OffLok in the menu bar with its window, and the `offlok` command. Every network
+  service points at OffLok; `sudo /usr/local/libexec/offlok/uninstall.sh` gives each its original DNS back. The
+  package is not signed yet: macOS asks to allow it once, in System Settings › Privacy & Security.
+- **Updates on macOS**, as on Windows: OffLok installs a new release's package itself, once its signature checks.
+- **Unbound's and OpenSSL's security fixes reach the Mac** as Unbound's reach Windows: a daily watch checks their
+  signatures and proposes a new OffLok release.
+- **offlok.org:** the Mac's download and how to open it, and a "Donate" button (Liberapay).
+
 ## 0.5.1
 
 - **Windows: the window opens out of the tray icon**, as Windows's own flyouts do: no frame and no taskbar button,

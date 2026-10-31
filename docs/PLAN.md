@@ -291,13 +291,25 @@ already runs their own Unbound keeps it.
 
 ### macOS
 
-- **Homebrew tap:** `loklakh-s/tap`, a formula built from source, with Homebrew's Unbound. Then
-  `sudo offlok install` sets up the launchd daemon.
-- **Unsigned `.pkg`:** for people without Homebrew, with the steps to allow it in System Settings › Privacy &
-  Security.
-- **System DNS:** per network service (`networksetup` or the SystemConfiguration API), changes watched through
-  SCDynamicStore, and `/etc/resolver/<domain>` files for VPN domains.
-- **Tests:** `macos` runners, then a real Mac for Wi-Fi, VPNs and captive portals.
+- **Unsigned `.pkg` first** (0.6.0; the maintainer chose ".pkg, then Homebrew", 2026-10-30, and to ship it unsigned,
+  2026-10-31): OffLok.app in the menu bar (LSUIElement, started at every login by a LaunchAgent), offlokd under
+  launchd (`org.loklakh.offlokd`), the `offlok` command, and **Unbound built by us** from NLnet Labs' source with
+  OpenSSL 3.5 linked in, one program for Apple silicon and Intel, macOS 13 or later (Go 1.27's own minimum). Both
+  sources are pinned with their SHA-256 after their signatures are checked (`packaging/macos/sources.env`), and the
+  daily watch proposes their security fixes. Unbound drops to a hidden `_offlok` account. The site gives the steps
+  to allow the package in System Settings › Privacy & Security.
+- **Its icon keeps a tile** (the brand charter: the Dock expects one, and macOS 26 shuts a round icon in a grey
+  square): very dark teal, the mark at 72 %, Apple's grid (chosen on a board, 2026-10-31).
+- **Updates:** as on Windows, offlokd downloads the new release's `.pkg`, checks it against the signed
+  `SHA256SUMS`, and runs macOS's installer; the package restarts offlokd and the menu bar app.
+- **Homebrew tap, later:** `loklakh-s/tap`, a formula built from source, with Homebrew's Unbound; then
+  `sudo offlok install` sets up the launchd daemon. Installed by Homebrew, OffLok leaves its updates to Homebrew.
+- **System DNS:** per network service with `networksetup`; the network's own DNS read in `State:` through
+  `scutil`; caches flushed (`dscacheutil`, mDNSResponder). A VPN's split DNS (its match domains) is left to macOS,
+  which sends those domains to the VPN's servers by itself: no `/etc/resolver` file is needed.
+- **Tests:** GitHub's macOS 26 runners install the package, check launchd, every network service's DNS, DNSSEC,
+  blocking, a crash, the fallback and strict mode behind pf, an update from one test release to the next, and the
+  uninstall; then a real Mac for Wi-Fi, VPNs and captive portals.
 
 ### Android (2026-10-31: Google Play, F-Droid and the APK on GitHub)
 
@@ -384,10 +396,15 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   - a newer `unbound-<version>.zip` (64-bit, no release candidate) is taken only with a good OpenPGP signature by
     NLnet Labs' release key G2 (`2310 1869 0C4D 903E F419 146A A144 323D EAAC DF45`, in
     `packaging/windows/nlnetlabs-releases-g2.asc`, the same on nlnetlabs.nl and keys.openpgp.org) and the SHA-256
-    NLnet Labs published;
+    NLnet Labs published; the source tarball the macOS package builds from, the same way;
+  - **OpenSSL**, linked into the macOS package's Unbound, likewise (2026-10-31): a newer release of the pinned
+    series (3.5, long-term support until 2030-04-08), signed by OpenSSL's key (`B146 647E 45A7 B339 47AB 226B 2A2C
+    87D1 6169 2D40`, `packaging/macos/openssl-release.asc`), with the CVEs its notes name
+    (`packaging/macos/openssl-update.sh`);
   - `packaging/windows/unbound-update.sh` pins it, adds a patch release to `CHANGELOG.md` with the CVEs NLnet Labs'
     advisories say it fixes (or adds it to the version in progress, when VERSION is not released yet), and the
-    job opens a pull request and runs the whole CI on its branch; a newer Unbound closes an older one's request.
+    job opens a pull request and runs the whole CI and the macOS workflow on its branch; a newer one closes an older
+    one's request.
     The repository must let GitHub Actions open pull requests (Settings, Actions, General); when it cannot, an
     issue says so, with the link that opens it;
   - merging it is the approval: once the CI passes on main, the job makes the tag and runs the release workflow
@@ -463,7 +480,7 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 ```
 
 - **Identity:** commits use `LokLakh <contact@loklakh.fr>`.
-- **CI:** GitHub-hosted runners on Linux and Windows (macOS to come). They run the unit tests, the integration
+- **CI:** GitHub-hosted runners on Linux, Windows and macOS. They run the unit tests, the integration
   tests in containers, and an install → resolve → update → uninstall → original-settings-restored test on each
   platform.
 
@@ -476,7 +493,7 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 4. **Blocking**, off by default.
 5. **Windows:** service, DNS plumbing, an installer with Unbound, runner tests, then real machines. SignPath
    application, after asking the maintainer.
-6. **macOS:** launchd, DNS plumbing, Homebrew tap, unsigned `.pkg`.
+6. **macOS:** launchd, DNS plumbing, an unsigned `.pkg` (0.6.0), then a Homebrew tap.
 7. **Android:** the Go core with libunbound in a local VPN, the computers' window in a WebView, emulator tests,
    then GitHub, F-Droid and Google Play.
 8. **Later:** iOS, the Apple Developer account and a signed `.pkg`.

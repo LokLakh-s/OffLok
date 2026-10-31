@@ -4,10 +4,10 @@ Your computer as its own DNS resolver. OffLok runs [Unbound](https://nlnetlabs.n
 points the system DNS at it: names are looked up starting from the root servers, with no internet provider,
 Google, Cloudflare or Quad9 in between. Free software under the MIT licence.
 
-> **Status: early.** 0.5.0 is the first release. Linux (tested on Ubuntu 24.04, with systemd-resolved and
-> without it) and Windows 10 (version 2004 or later) and 11 work, each with a tray icon and a window. macOS
-> follows, then Android and iOS. See [docs/PLAN.md](docs/PLAN.md), [docs/ROADMAP.md](docs/ROADMAP.md) and
-> [CHANGELOG.md](CHANGELOG.md).
+> **Status: early.** Linux (tested on Ubuntu 24.04, with systemd-resolved and without it), Windows 10 (version
+> 2004 or later) and 11, and macOS 13 or later (Apple silicon and Intel) work, each with an icon in the tray or the
+> menu bar and a window. Android follows, on Google Play and F-Droid, then iOS. See [docs/PLAN.md](docs/PLAN.md),
+> [docs/ROADMAP.md](docs/ROADMAP.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## What it changes, honestly
 
@@ -34,8 +34,9 @@ back, and stopping or uninstalling restores the system exactly as it was. Unboun
 
 ## Download
 
-From [the releases](https://github.com/LokLakh-s/OffLok/releases): `offlok-<version>-setup.exe` for Windows, the
-`.deb` or `.rpm` packages for Linux (`offlok`, and `offlok-desktop` for the tray icon and window).
+From [the releases](https://github.com/LokLakh-s/OffLok/releases): `offlok-<version>-setup.exe` for Windows,
+`offlok-<version>.pkg` for macOS, the `.deb` or `.rpm` packages for Linux (`offlok`, and `offlok-desktop` for the
+tray icon and window).
 
 Every release has a `SHA256SUMS` file, signed with OffLok's release key
 ([`offlok-release-45e724ba.pub.pem`](packaging/release/offlok-release-45e724ba.pub.pem), Ed25519). To check a
@@ -81,6 +82,16 @@ every session) and the `offlok` command, used without `sudo` from a terminal run
 shows Windows's own prompt (UAC) when a setting needs an administrator. Uninstalling gives every network
 interface its original DNS back.
 
+On macOS, `offlok-<version>.pkg` installs everything: offlokd under launchd, Unbound (built with OpenSSL 3.5),
+OffLok in the menu bar (started at every login) and the `offlok` command, used with `sudo`. The package is not
+signed yet: macOS refuses to open it at first, and System Settings › Privacy & Security then offers "Open Anyway".
+The menu bar app asks macOS for an administrator when a setting needs one. To uninstall, which gives every network
+service its original DNS back:
+
+```
+sudo /usr/local/libexec/offlok/uninstall.sh
+```
+
 Once a day, OffLok looks for a new release; the window then offers it, and `offlok update` installs it. An update
 is installed only if `SHA256SUMS` carries the release key's signature and every file matches it.
 
@@ -95,10 +106,13 @@ test/integration/run.sh           # the main scenario in a disposable systemd co
 test/integration/run.sh package   # the .deb's install and removal scripts
 test/integration/run.sh desktop   # the desktop packages on a virtual screen, screenshots in bin/shots/
 packaging/windows/build.sh        # the Windows installer, dist/offlok-<version>-setup.exe (built on Linux too)
+packaging/macos/build-unbound.sh  # on a Mac: Unbound with OpenSSL linked in, one program for both processors
+packaging/macos/build-pkg.sh      # on a Mac, after it: dist/offlok-<version>.pkg
 site/build.sh                     # the website, offlok.org, in bin/site/ (French, and English under en/)
 ```
 
-`test/windows/test.ps1` checks the Windows installer on a disposable Windows machine (the CI uses GitHub's).
+`test/windows/test.ps1` checks the Windows installer on a disposable Windows machine, and `test/macos/test.sh` the
+macOS package on a disposable Mac (the CI uses GitHub's).
 
 The integration tests change nothing on the machine running them: each container has its own network
 namespace, resolver and firewall.
@@ -132,4 +146,5 @@ starts, the Windows installer is not signed, and Windows warns before running it
 ## Licence
 
 MIT, see [LICENSE](LICENSE). OffLok uses Unbound (BSD-3-Clause, NLnet Labs), installed from the distribution on
-Linux and shipped from NLnet Labs' own build on Windows.
+Linux, shipped from NLnet Labs' own build on Windows, and built from NLnet Labs' source with OpenSSL (Apache 2.0)
+on macOS.

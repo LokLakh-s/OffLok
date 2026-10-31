@@ -81,7 +81,12 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 
 ## 6. macOS
 
-- [ ] launchd daemon, DNS per network service, Homebrew tap, unsigned `.pkg`
+- [x] launchd daemon, DNS per network service, the menu bar app, Unbound built with OpenSSL 3.5, an unsigned
+      universal `.pkg`, tested on GitHub's macOS 26 runners (install, DNS, DNSSEC, blocking, a crash, fallback,
+      strict mode, update, uninstall)
+- [x] The `.pkg` in the releases and in `SHA256SUMS`; the daily watch covers Unbound's source and OpenSSL
+- [ ] A real Mac: Wi-Fi, VPNs (their split DNS is left to macOS), captive portals
+- [ ] Homebrew tap
 
 ## 7. Android
 
