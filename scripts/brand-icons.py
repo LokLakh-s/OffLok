@@ -1,10 +1,13 @@
 """OffLok's icons, from its marks in assets/brand/: the taskbar's four states from the bold mark (on: the mark;
 fallback and error: an orange or red dot at the bottom right; off: the mark in grey, chosen on 29/10/2026), the app
-icon in the desktop's sizes (the mark alone on transparency, 94 % of the square), the window's mark, and the
-website's images.
+icon in the desktop's sizes (the mark alone on transparency, 94 % of the square), the Mac's icon on a tile (the
+Dock expects one, and macOS 26 shuts a round icon in a grey square: very dark teal, the mark at 72 %, chosen on
+31/10/2026), the window's mark, and the website's images.
 Run from the repository: python3 scripts/brand-icons.py"""
+import os
+
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 MARK, SMALL = "assets/brand/offlok-mark.png", "assets/brand/offlok-mark-small.png"
 ORANGE, RED = (249, 115, 22), (239, 68, 68)
@@ -38,6 +41,38 @@ def padded(img: Image.Image, size: int, fill=0.94) -> Image.Image:
     return out
 
 
+def squircle(size: int, n: float = 5.0, ss: int = 4) -> Image.Image:
+    """Apple's continuous-corner shape, as a superellipse, antialiased by supersampling."""
+    t = (np.arange(size * ss) + 0.5) / (size * ss) * 2 - 1
+    x, y = np.meshgrid(t, t)
+    inside = (np.abs(x) ** n + np.abs(y) ** n) <= 1
+    return Image.fromarray((inside * 255).astype(np.uint8), "L").resize((size, size), Image.LANCZOS)
+
+
+def mac_tile(src: Image.Image) -> Image.Image:
+    """The Mac's icon, 1024 px on Apple's grid: an 824 px tile with a drop shadow, very dark teal (the inside of the
+    mark's ring) lit at its centre, a thin teal rim, the mark at 72 % of the tile."""
+    S, B = 1024, 824
+    t = np.linspace(-1, 1, B)
+    x, y = np.meshgrid(t, t)
+    r = np.clip(np.sqrt(x ** 2 + (y + 0.1) ** 2) / 1.25, 0, 1)[..., None]
+    body = Image.fromarray((np.array([14, 58, 58]) * (1 - r) + np.array([3, 13, 14]) * r).astype(np.uint8), "RGB").convert("RGBA")
+    m = src.resize((round(B * 0.72),) * 2, Image.LANCZOS)
+    body.alpha_composite(m, ((B - m.width) // 2, (B - m.height) // 2))
+    shape = squircle(B)
+    edge = np.asarray(shape, int) - np.asarray(shape.filter(ImageFilter.MinFilter(7)), int)
+    rim = Image.new("RGBA", (B, B), (110, 231, 214, 0))
+    rim.putalpha(Image.fromarray((np.clip(edge, 0, 255) * 70 // 255).astype(np.uint8), "L"))
+    body.alpha_composite(rim)
+    body.putalpha(shape)
+    out = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    shadow = Image.new("L", (S, S), 0)
+    shadow.paste(shape, ((S - B) // 2, (S - B) // 2 + 12))
+    out.putalpha(shadow.filter(ImageFilter.GaussianBlur(14)).point(lambda v: v * 0.3))
+    out.alpha_composite(body, ((S - B) // 2, (S - B) // 2))
+    return out
+
+
 if __name__ == "__main__":
     # The tray takes one picture and scales it: 64 px drawn from 1024, the dot drawn at that size.
     small = Image.open(SMALL).convert("RGBA").resize((256, 256), Image.LANCZOS)
@@ -52,6 +87,14 @@ if __name__ == "__main__":
     sizes = [256, 128, 64, 48, 32, 24, 16]
     frames = [padded(Image.open(SMALL).convert("RGBA") if n <= 32 else mark, n) for n in sizes]
     frames[0].save("packaging/windows/offlok.ico", format="ICO", sizes=[(n, n) for n in sizes], append_images=frames[1:])
+    # The Mac: an iconset, which build-pkg.sh turns into the app's .icns (iconutil); up to 64 px, from the bold mark.
+    tiles = {"mark": mac_tile(mark), "bold": mac_tile(Image.open(SMALL).convert("RGBA"))}
+    os.makedirs("packaging/macos/offlok.iconset", exist_ok=True)
+    for size in (16, 32, 128, 256, 512):
+        for scale, suffix in ((1, ""), (2, "@2x")):
+            px = size * scale
+            tile = tiles["bold" if px <= 64 else "mark"]
+            tile.resize((px, px), Image.LANCZOS).save(f"packaging/macos/offlok.iconset/icon_{size}x{size}{suffix}.png", optimize=True)
     # The website: the mark (hero, link previews), the bold mark where it is small (header, favicons), the tray's
     # states at twice their shown size, and a home-screen icon on the window's dark background.
     mark.resize((512, 512), Image.LANCZOS).save("site/img/offlok-mark.png", optimize=True)
@@ -67,4 +110,4 @@ if __name__ == "__main__":
     tray = bold.resize((384, 384), Image.LANCZOS)
     for name, img in {"on": tray, "fallback": badge(tray, ORANGE), "error": badge(tray, RED), "off": grey(tray)}.items():
         img.resize((96, 96), Image.LANCZOS).save(f"site/img/state-{name}.png", optimize=True)
-    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png, packaging/windows/offlok.ico, site/")
+    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png, packaging/windows/offlok.ico, packaging/macos/offlok.iconset/, site/")
