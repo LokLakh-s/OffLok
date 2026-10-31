@@ -77,6 +77,7 @@ fi
 kill "$server"
 sudo "$libexec/uninstall.sh"
 check 'uninstall takes offlokd out of launchd' launchd_has_none
+launchd_has_none || sudo launchctl print system/org.loklakh.offlokd 2>&1 | grep -E 'state =|pid =|last exit|path =' | sed 's/^/# /'
 after=$(dns_snapshot)
 check 'every network service has its original DNS back' [ "$before" = "$after" ]
 

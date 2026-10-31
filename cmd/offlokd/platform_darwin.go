@@ -100,6 +100,23 @@ func launchctl(args ...string) error {
 	return nil
 }
 
+// bootout takes a job out of launchd and waits until launchd has let it go: offlokd gives the DNS back before it
+// ends. A job launchd still holds after 30 seconds is an error, with what bootout said.
+func bootout(label string) error {
+	target := "system/" + label
+	if launchctl("print", target) != nil {
+		return nil
+	}
+	err := launchctl("bootout", target)
+	for i := 0; i < 30; i++ {
+		if launchctl("print", target) != nil {
+			return nil
+		}
+		time.Sleep(time.Second)
+	}
+	return fmt.Errorf("launchd still holds %s: %v", label, err)
+}
+
 // launchdPlist starts offlokd at boot, as root, and again 2 seconds after it stops: as Windows's service manager
 // does. What it prints before its log is open (a crash) goes to offlokd.err.
 func launchdPlist(exe, stateDir string) []byte {
@@ -162,11 +179,8 @@ func install(stateDir string, args []string) error {
 	if err := os.WriteFile(plistPath, launchdPlist(exe, stateDir), 0o644); err != nil {
 		return err
 	}
-	_ = launchctl("bootout", "system/"+launchdLabel) // the previous version's, on an upgrade
-	// The previous offlokd gives the DNS back before it ends; launchd takes the job again only once it ended.
-	for i := 0; i < 30 && launchctl("print", "system/"+launchdLabel) == nil; i++ {
-		time.Sleep(time.Second)
-	}
+	// The previous version's, on an upgrade: launchd takes the job again only once it ended.
+	_ = bootout(launchdLabel)
 	_ = launchctl("enable", "system/"+launchdLabel)
 	if err := launchctl("bootstrap", "system", plistPath); err != nil {
 		return err
@@ -181,8 +195,10 @@ func uninstall(stateDir string) error {
 	if err := checkPrivileges(); err != nil {
 		return err
 	}
-	_ = launchctl("bootout", "system/"+launchdLabel)
-	_ = launchctl("bootout", "system/"+updateLabel) // the last update's job, ended; its file goes with stateDir
+	if err := bootout(launchdLabel); err != nil {
+		return err
+	}
+	_ = bootout(updateLabel) // the last update's job, ended; its file goes with stateDir
 	if err := os.Remove(plistPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
