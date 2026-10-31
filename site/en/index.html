@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <title>OffLok — your computer, its own DNS</title>
-  <meta name="description" content="OffLok, free and open-source software for Windows and Linux, makes your computer its own DNS: it finds the address of every site itself, with no internet provider, Google or Cloudflare in between.">
+  <meta name="description" content="OffLok, free and open-source software for Windows, Mac and Linux, makes your computer its own DNS: it finds the address of every site itself, with no internet provider, Google or Cloudflare in between.">
   <link rel="canonical" href="https://offlok.org/en/">
   <link rel="alternate" hreflang="fr" href="https://offlok.org/">
   <link rel="alternate" hreflang="en" href="https://offlok.org/en/">
@@ -104,12 +104,12 @@
         <h1>The internet's address book, <span class="grad">at home</span>.</h1>
         <p class="lead">OffLok makes your computer its own <strong>DNS</strong>, the address book that turns a site's name into an address. It looks up every answer at the source, starting from the root of the internet: no more internet provider, Google or Cloudflare in the middle, receiving the list of every site you visit.</p>
         <div class="cta">
-          <a class="btn btn-gold" href="#download" data-cta data-label-windows="Download for Windows" data-label-linux="Download for Linux" data-label-mac="Coming soon to Mac" data-label-mobile="For computers"><svg class="icon"><use href="#i-download"/></svg><span>Download OffLok</span></a>
+          <a class="btn btn-gold" href="#download" data-cta data-label-windows="Download for Windows" data-label-linux="Download for Linux" data-label-mac="Download for Mac" data-label-mobile="For computers"><svg class="icon"><use href="#i-download"/></svg><span>Download OffLok</span></a>
           <a class="btn btn-ghost" href="#dns">What is DNS?</a>
         </div>
         <p class="reassure">
-          <span><svg class="icon"><use href="#i-check"/></svg>Windows 10 and 11, Linux</span>
-          <span><svg class="icon"><use href="#i-check"/></svg>Mac coming soon</span>
+          <span><svg class="icon"><use href="#i-check"/></svg>Windows, Mac and Linux</span>
+          <span><svg class="icon"><use href="#i-check"/></svg>Android coming soon</span>
           <span><svg class="icon"><use href="#i-check"/></svg>Undone in one click</span>
         </p>
       </div>
@@ -313,6 +313,28 @@
           </ol>
         </article>
 
+        <article class="platform" data-os="mac" id="mac">
+          <span class="yours">Your system</span>
+          <div class="platform-head">
+            <span class="ico"><svg class="icon"><use href="#i-laptop"/></svg></span>
+            <div>
+              <h3>Mac</h3>
+              <p>macOS 13 Ventura or later, Apple silicon or Intel</p>
+            </div>
+          </div>
+          <a class="btn btn-gold btn-block btn-col" href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok-{{VERSION}}.pkg">
+            <span class="btn-row"><svg class="icon"><use href="#i-download"/></svg>Download for Mac</span>
+            <span class="file">offlok-{{VERSION}}.pkg</span>
+          </a>
+          <ol class="howto">
+            <li>Open the downloaded file.</li>
+            <li>macOS says it could not verify the file? Close the message, open <b>System Settings › Privacy &amp; Security</b>, scroll down to <b>Security</b> and click <b>Open Anyway</b>.
+              <span class="why">That's expected for now: OffLok is not signed by Apple yet.</span></li>
+            <li>Follow the installer: it explains what OffLok changes, then asks for your password.</li>
+            <li>Done: OffLok's window opens, and its icon stays in the menu bar, at the top right of the screen.</li>
+          </ol>
+        </article>
+
         <article class="platform" data-os="linux" id="linux">
           <span class="yours">Your system</span>
           <div class="platform-head">
@@ -357,20 +379,12 @@ sudo dnf install ./offlok-{{VERSION}}-1.x86_64.rpm ./offlok-desktop-{{VERSION}}-
         </article>
 
         <div class="soon-row">
-          <article class="soon" data-os="mac">
-            <span class="yours">Your system</span>
-            <span class="ico"><svg class="icon"><use href="#i-laptop"/></svg></span>
-            <div>
-              <h3>Mac <span class="chip">in the works</span></h3>
-              <p>OffLok comes to the Mac right after Windows and Linux.</p>
-            </div>
-          </article>
           <article class="soon" data-os="mobile">
             <span class="yours">Your system</span>
             <span class="ico"><svg class="icon"><use href="#i-phone"/></svg></span>
             <div>
-              <h3>Android and iPhone <span class="chip">later</span></h3>
-              <p>Phones come next. For now, OffLok installs on a computer.</p>
+              <h3>Android <span class="chip">in the works</span></h3>
+              <p>Coming to Google Play and F-Droid; the iPhone will come later. For now, OffLok installs on a computer.</p>
             </div>
           </article>
         </div>
@@ -514,8 +528,8 @@ sha256sum --ignore-missing -c SHA256SUMS</pre><button type="button" class="copy"
           <div class="answer"><p>No catch: OffLok is free software (MIT licence). Its code is public; no account, no ads, no subscription, and it sends no statistics.</p><p>If you want to support its development, you can donate on <a href="https://liberapay.com/LokLakh/donate">Liberapay</a>, a non-profit donation platform based in France.</p><p>What it contacts, besides DNS servers: the blocking lists you switch on, and GitHub once a day to see whether there is a new version. That last check can be turned off with a switch.</p></div>
         </details>
         <details>
-          <summary>Why does Windows warn me during installation?<svg class="icon"><use href="#i-plus"/></svg></summary>
-          <div class="answer"><p>Windows is wary of programs without a signature it recognises. A free signature for open-source software (SignPath Foundation) is being prepared for OffLok. Meanwhile, the installer is built in public by GitHub from the published code, and you can check it was not altered (see “Check what you downloaded”).</p></div>
+          <summary>Why do Windows and macOS warn me during installation?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>Windows is wary of programs without a signature it recognises. A free signature for open-source software (SignPath Foundation) is being prepared for OffLok. Meanwhile, the installer is built in public by GitHub from the published code, and you can check it was not altered (see “Check what you downloaded”).</p><p>On a Mac, same reason: OffLok is not signed by Apple yet. The steps are in the Mac card above.</p></div>
         </details>
         <details>
           <summary>Is it legal?<svg class="icon"><use href="#i-plus"/></svg></summary>
@@ -523,7 +537,7 @@ sha256sum --ignore-missing -c SHA256SUMS</pre><button type="button" class="copy"
         </details>
         <details>
           <summary>How do I uninstall it?<svg class="icon"><use href="#i-plus"/></svg></summary>
-          <div class="answer"><p>On Windows: <b>Settings › Apps › Installed apps</b>, then OffLok › <b>Uninstall</b>. On Linux: <code>sudo apt remove offlok offlok-desktop</code> (or <code>sudo dnf remove</code> on Fedora).</p><p>Either way, every connection of your computer gets its original DNS back.</p></div>
+          <div class="answer"><p>On Windows: <b>Settings › Apps › Installed apps</b>, then OffLok › <b>Uninstall</b>. On Linux: <code>sudo apt remove offlok offlok-desktop</code> (or <code>sudo dnf remove</code> on Fedora). On a Mac: open Terminal, type <code>sudo /usr/local/libexec/offlok/uninstall.sh</code>, then your password.</p><p>Either way, every connection of your computer gets its original DNS back.</p></div>
         </details>
         <details>
           <summary>Who makes OffLok?<svg class="icon"><use href="#i-plus"/></svg></summary>

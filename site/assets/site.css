@@ -582,13 +582,16 @@ section { position: relative; padding: 104px 0; }
 }
 html[data-os="windows"] .platform[data-os="windows"],
 html[data-os="linux"] .platform[data-os="linux"],
-html[data-os="mac"] .soon[data-os="mac"],
+html[data-os="mac"] .platform[data-os="mac"],
 html[data-os="mobile"] .soon[data-os="mobile"] { border-color: var(--teal); box-shadow: var(--shadow-lg), 0 0 0 4px var(--teal-glow); }
 html[data-os="windows"] .platform[data-os="windows"] .yours,
 html[data-os="linux"] .platform[data-os="linux"] .yours,
-html[data-os="mac"] .soon[data-os="mac"] .yours,
+html[data-os="mac"] .platform[data-os="mac"] .yours,
 html[data-os="mobile"] .soon[data-os="mobile"] .yours { display: block; }
-html[data-os="linux"] .platform[data-os="linux"] { order: -1; }
+html[data-os="linux"] .platform[data-os="linux"],
+html[data-os="mac"] .platform[data-os="mac"] { order: -1; }
+/* Windows and Mac side by side, Linux (its tabs and commands) on the whole width. */
+.platform[data-os="linux"] { grid-column: 1 / -1; }
 
 .howto { margin: 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 14px; }
 .howto > li { min-width: 0; position: relative; padding-left: 42px; color: var(--ink-soft); font-size: 16px; counter-increment: step; }
@@ -679,7 +682,7 @@ html.js .tab-title { display: none; }
 .copy { display: none; }
 html.js .copy { display: grid; }
 
-.soon-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.soon-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .soon {
   position: relative;
   display: flex;
