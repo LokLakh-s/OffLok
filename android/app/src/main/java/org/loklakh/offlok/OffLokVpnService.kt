@@ -1,6 +1,7 @@
 package org.loklakh.offlok
 
 import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -32,7 +33,7 @@ class OffLokVpnService : VpnService() {
 
         /** Starts the service if it is not running, then the tunnel; returns its file descriptor, detached. */
         fun open(context: Context): Long {
-            check(prepare(context) == null) { "Android has not let OffLok start a VPN: turn OffLok on from its window" }
+            check(VpnService.prepare(context) == null) { "Android has not let OffLok start a VPN: turn OffLok on from its window" }
             if (running == null) {
                 started = CountDownLatch(1)
                 context.startForegroundService(Intent(context, OffLokVpnService::class.java))
@@ -45,7 +46,7 @@ class OffLokVpnService : VpnService() {
         /** The core closed the tunnel: the service ends. */
         fun close() {
             running?.let {
-                it.stopForeground(STOP_FOREGROUND_REMOVE)
+                it.stopForeground(Service.STOP_FOREGROUND_REMOVE)
                 it.stopSelf()
             }
         }
@@ -69,7 +70,7 @@ class OffLokVpnService : VpnService() {
             startForeground(NOTIFICATION, notification)
         }
         // Android's "Always-on VPN" starts the service itself, at boot: the user wants OffLok on.
-        if (intent?.action == SERVICE_INTERFACE) {
+        if (intent?.action == VpnService.SERVICE_INTERFACE) {
             Thread { Core.call("on") }.start()
         }
         return START_NOT_STICKY
