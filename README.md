@@ -57,18 +57,18 @@ sudo offlok access everyone     let every user change settings (administrators o
 sudo offlok updates off         stop looking for updates (sudo offlok update installs one now)
 ```
 
-Blocking ads, trackers and malicious sites is included and off at first:
+Blocking trackers and malicious sites is included and off at first:
 
 ```
-sudo offlok block ads on        also: trackers, malicious, custom (your own lists)
+sudo offlok block trackers on   also: malicious, custom (your own lists)
 offlok check example.org        is this site blocked, and by which list?
 sudo offlok trust example.org   never block this site (sudo offlok untrust to undo)
 offlok pause                    let everything through for 10 minutes (offlok pause off to end it)
 sudo offlok list add https://example.org/list.txt
 ```
 
-The lists (AdGuard DNS filter, ShadowWhisperer, HaGeZi, URLhaus and others, each under its own
-licence) are downloaded by your computer once a day, only for the categories switched on; OffLok never ships them.
+The lists (ShadowWhisperer, HaGeZi, URLhaus and others, each under its own licence) are downloaded by your
+computer once a day, only for the categories switched on; OffLok never ships them.
 
 The command and the window speak English or French, following the system language. On a desktop, the
 `offlok-desktop` package adds the tray icon (a dot when OffLok falls back or fails, grey when off) and its window;
@@ -109,8 +109,8 @@ OffLok keeps no record of the names you look up and sends nothing about you anyw
 
 - **The DNS servers in charge of each name you look up**, starting from the root servers: that is its job.
   Unencrypted, like any DNS: see "What it changes, honestly" above.
-- **The blocking lists you switch on**, downloaded once a day from their authors (AdGuard, HaGeZi, URLhaus and
-  the others, or the addresses you add).
+- **The blocking lists you switch on**, downloaded once a day from their authors (HaGeZi, URLhaus and the
+  others, or the addresses you add).
 - **GitHub, once a day, to look for an update**, which lets GitHub see your computer's address and that it runs
   OffLok. The Windows installer says so next to a box that turns it off; the window has a switch, and so does the
   command (`offlok updates off`).

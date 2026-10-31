@@ -146,7 +146,7 @@
           <h2>Le DNS, c'est l'annuaire d'Internet</h2>
           <p>Sur Internet, chaque site est rangé à une adresse faite de chiffres, comme <code>185.15.58.224</code>. Pratique pour les machines, impossible à retenir pour nous.</p>
           <p>Le <strong>DNS</strong> (pour <em>Domain Name System</em>, le « système des noms de domaine ») fait le lien : tu tapes un nom, il trouve le numéro. Exactement comme un annuaire téléphonique.</p>
-          <p>Ça se passe des centaines de fois par jour sans que tu le voies : chaque site, chaque appli, chaque image, chaque pub et chaque mise à jour commence par une question au DNS.</p>
+          <p>Ça se passe des centaines de fois par jour sans que tu le voies : chaque site, chaque appli, chaque image, chaque vidéo et chaque mise à jour commence par une question au DNS.</p>
         </div>
         <div class="lookup" data-reveal aria-label="Exemple : ce qui se passe quand tu ouvres un site">
           <div class="urlbar"><svg class="icon"><use href="#i-lock"/></svg>fr.wikipedia.org<span class="caret"></span></div>
@@ -257,8 +257,8 @@
         </article>
         <article class="feature" data-reveal>
           <span class="ico"><svg class="icon"><use href="#i-ban"/></svg></span>
-          <h3>Moins de pubs, si tu veux</h3>
-          <p>Le blocage des pubs, des pisteurs et des sites piégés est inclus, coupé au départ : un interrupteur par catégorie, une pause de 10 minutes, et « Faire confiance » pour un site qui te manque.</p>
+          <h3>Moins de pisteurs, si tu veux</h3>
+          <p>Le blocage des pisteurs et des sites piégés est inclus, coupé au départ : un interrupteur par catégorie, tes propres listes, une pause de 10 minutes, et « Faire confiance » pour un site qui te manque.</p>
         </article>
         <article class="feature" data-reveal>
           <span class="ico"><svg class="icon"><use href="#i-code"/></svg></span>
@@ -397,7 +397,7 @@ sha256sum --ignore-missing -c SHA256SUMS</pre><button type="button" class="copy"
         <div class="app-frame">
           <picture>
             <source srcset="img/app-fr-dark.webp" media="(prefers-color-scheme: dark)">
-            <img src="img/app-fr-light.webp" alt="La fenêtre d'OffLok : « Tu es ton propre DNS », l'interrupteur principal, et le blocage des pubs, des pisteurs et des sites piégés." width="880" height="1474" loading="lazy">
+            <img src="img/app-fr-light.webp" alt="La fenêtre d'OffLok : « Tu es ton propre DNS », l'interrupteur principal, et le blocage des pisteurs et des sites piégés." width="880" height="1304" loading="lazy">
           </picture>
         </div>
         <p class="app-caption">La fenêtre d'OffLok, à un clic de son icône.</p>
@@ -506,8 +506,8 @@ sha256sum --ignore-missing -c SHA256SUMS</pre><button type="button" class="copy"
           <div class="answer"><p>Ces réseaux bloquent souvent l'accès direct à la racine, ou demandent de se connecter sur une page. OffLok passe alors par le DNS du réseau, le temps de revenir (icône à pastille orange).</p><p>Tu préfères ne jamais passer par lui ? Active le mode strict : le bouton « Se connecter à ce réseau » ouvre la porte 5 minutes, le temps de la page de connexion. Tu peux aussi indiquer un résolveur chiffré de secours (DNS over TLS), utilisé avant le DNS du réseau.</p></div>
         </details>
         <details>
-          <summary>Est-ce que ça bloque les pubs ?<svg class="icon"><use href="#i-plus"/></svg></summary>
-          <div class="answer"><p>Si tu veux. Le blocage est inclus mais coupé au départ, en quatre interrupteurs : les pubs, les pisteurs, les sites piégés (hameçonnage, arnaques) et tes propres listes. Les listes viennent de leurs auteurs (AdGuard, HaGeZi, URLhaus et d'autres), téléchargées une fois par jour par ton ordinateur.</p><p>Un site ne marche plus ? « Vérifier » te dit s'il est bloqué et par quelle liste, et « Faire confiance à ce site » le débloque pour de bon.</p></div>
+          <summary>Est-ce que ça bloque des sites ?<svg class="icon"><use href="#i-plus"/></svg></summary>
+          <div class="answer"><p>Si tu veux. Le blocage est inclus mais coupé au départ, en trois interrupteurs : les pisteurs, les sites piégés (hameçonnage, arnaques) et tes propres listes. Les listes viennent de leurs auteurs (HaGeZi, URLhaus et d'autres), téléchargées une fois par jour par ton ordinateur.</p><p>Un site ne marche plus ? « Vérifier » te dit s'il est bloqué et par quelle liste, et « Faire confiance à ce site » le débloque pour de bon.</p></div>
         </details>
         <details>
           <summary>C'est gratuit ? Où est le piège ?<svg class="icon"><use href="#i-plus"/></svg></summary>
