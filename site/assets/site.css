@@ -262,6 +262,9 @@ section { position: relative; padding: 104px 0; }
 }
 .menu-list a { padding: 10px 12px; border-radius: 9px; color: var(--ink); text-decoration: none; font-weight: 550; }
 .menu-list a:hover { background: var(--teal-soft); }
+/* Donate: Liberapay, a gold heart. */
+.donate .icon, .menu-donate .icon { fill: var(--gold); stroke: var(--gold); }
+.menu-list .menu-donate { display: flex; align-items: center; gap: 10px; margin-top: 6px; border-top: 1px solid var(--line); border-radius: 0 0 9px 9px; padding-top: 14px; }
 
 /* Hero. */
 .hero { padding: 72px 0 112px; overflow: hidden; isolation: isolate; }
@@ -842,7 +845,11 @@ html.js .lookup[data-reveal].in > :nth-child(4) { transition-delay: 1.8s; }
   html.js [data-reveal], html.js .lookup[data-reveal] > * { opacity: 1; transform: none; transition: none; }
 }
 
-/* Narrower screens. */
+/* Narrower screens. Just above the menu's width, the French links leave no room for the donate button's words: its heart only. */
+@media (min-width: 1081px) and (max-width: 1160px) {
+  .nav ~ .bar-end .donate { padding-inline: 11px; }
+  .nav ~ .bar-end .donate span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 @media (max-width: 1080px) {
   .nav { display: none; }
   .menu { display: block; }

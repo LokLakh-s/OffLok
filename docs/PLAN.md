@@ -68,6 +68,8 @@ them is wrong. Points marked **(to confirm)** are proposals that still wait for 
 | Windows CI | **GitHub's Windows runners** (2026-10-29), on pushes to main only, while the repository is private (its minutes count double); real trials on a Windows PC |
 | Update source | **GitHub Releases** (2026-10-29): the app checks once a day and installs a new version only after checking OffLok's signature. It contacts GitHub (Microsoft) once a day |
 | Version | OffLok's own semantic versioning, starting at 0.1.0 (it is not part of the shared Lok version counter) |
+| Android | **Google Play, F-Droid and the APK on GitHub** (2026-10-31). The maintainer's Play developer account (`tor@offlok.org`) is going through identity verification. **Google Play without ad blocking, F-Droid and GitHub full** (2026-10-31) |
+| Donations | **Liberapay only** (2026-10-31), account `LokLakh`: a "Donate" button on offlok.org, our own, not Liberapay's script |
 
 ## Architecture
 
@@ -297,15 +299,82 @@ already runs their own Unbound keeps it.
   SCDynamicStore, and `/etc/resolver/<domain>` files for VPN domains.
 - **Tests:** `macos` runners, then a real Mac for Wi-Fi, VPNs and captive portals.
 
-### Android and iOS (later)
+### Android (2026-10-31: Google Play, F-Droid and the APK on GitHub)
 
-- **Android:** its "Private DNS" setting accepts only a remote DoT hostname, not a resolver on the phone. OffLok
-  would need a **local VPN** (`VpnService`), as RethinkDNS and Intra do. That takes the slot of a real VPN.
-  - Distribution through F-Droid.
-  - Android's **developer verification** reaches France in 2027 and covers sideloaded APKs on certified devices.
-    It means either a full verification (ID, $25) or a free "limited distribution" account (20 devices).
-- **iOS:** a Network Extension (packet tunnel) and the Apple Developer account. Memory and permission limits:
-  *To verify*.
+No Android app may set the phone's DNS: the "Private DNS" setting takes only a remote DNS-over-TLS hostname. An app
+that answers DNS for the whole phone does it through a **local VPN** (`VpnService`), as RethinkDNS and Intra do.
+
+```
+ apps ─► Android's resolver ─► 10.111.222.1 (OffLok's address, the only route into the tunnel)
+                                   │  the tunnel's packets: UDP queries, IPv4 and IPv6
+                                   ▼
+          OffLok's Go core, in the app: the front (blocking) ─► libunbound (recursion, DNSSEC, cache)
+                                                                    │  plain sockets, outside the tunnel
+                                                                    ▼
+                                         root → TLD → the domain's servers; fallback: personal DoT, network DNS
+```
+
+- **DNS only in the tunnel.** The tunnel's DNS server is one made-up address (`10.111.222.1`, and an `fd` address
+  when the network has IPv6), and that address is its only route: browsing and every other connection go on as
+  usual, neither slowed down nor seen by OffLok. OffLok leaves itself out of its tunnel.
+- **The Go core reads the tunnel.** It takes the UDP queries sent to that address, answers them through the front
+  (blocking, pause, trusted sites) and Unbound, and writes the answers back. The tunnel's MTU is large enough for
+  any UDP answer, so answers are never truncated. TCP to that address (Android's DNS over TCP, and its "Automatic"
+  Private DNS probing port 853) gets a reset at once, so that Android falls back to plain DNS without waiting.
+- **Unbound runs inside the app, as libunbound**, not as the `unbound` program: since Android 10 an app may not run
+  programs from the folders it can write to, and since Android 12 the system may kill an app's child processes.
+  libunbound is the same resolver (the iterator and the validator) and reads the same configuration syntax; its
+  answers come back as DNS packets, which the front passes on. Unbound and OpenSSL are the macOS build's versions,
+  pinned and signature-checked the same way, built with the NDK.
+- **The same core as on computers.** `internal/daemon` gains an Android backend: the system DNS is the tunnel (on =
+  establish it, off = close it), and the network's DNS comes from Android's `ConnectivityManager` for the fallback,
+  captive portals and local names. Unbound becomes an engine behind one interface: the program on computers,
+  libunbound on Android. The core is built with `gomobile bind` into an `.aar` the Kotlin app calls.
+- **The app.** A foreground `VpnService`; its notification shows the state as the tray icon does. The window is
+  **the computers' window** (`desktop/frontend`) in a WebView: `api.js` talks to the Go core through a JavaScript
+  bridge instead of Wails, so one window serves every platform, in English and French. A Quick Settings tile turns
+  OffLok on and off. Android's "Always-on VPN" setting starts it at boot.
+- **What only a phone needs.**
+  - Android asks once for the VPN permission, the first time OffLok is turned on.
+  - A Private DNS hostname set in Android's settings sends every query to that server, around any VPN: the window
+    says so, with a button to the setting.
+  - Android runs one VPN at a time: turning another VPN app on turns OffLok off, and the window says why.
+- **Left out on Android:** settings access levels (one user), the command line, and the updater: Google Play and
+  F-Droid update the app themselves, and the GitHub APK is updated with F-Droid, IzzyOnDroid or Obtainium.
+- **Requirements:** Android 9 or later (API 28, where the Private DNS state can be read), on arm64-v8a,
+  armeabi-v7a and x86_64.
+- **Package and versions:** `org.loklakh.offlok`. Its version is OffLok's `VERSION`, released with the computers'
+  versions; `versionCode` = major × 10,000 + minor × 100 + patch.
+- **One signing key everywhere.** A release key (RSA 4096) signs the GitHub APK. F-Droid publishes that same APK
+  when its own build matches it byte for byte (a reproducible build: `Binaries` and `AllowedAPKSigningKeys` in its
+  metadata). The key is also given to Play App Signing ("provide a copy of your app signing key"), so the app
+  updates from any of the three sources. The key lives in a GitHub secret, with a copy the maintainer keeps offline.
+- **Google's developer verification** (certified devices, France in 2027): the maintainer's Play Console account
+  registers `org.loklakh.offlok` and the release key, which covers the APK of GitHub and F-Droid too. Users then
+  install it as today, without the "advanced flow".
+- **Distribution.**
+  - **GitHub Releases:** a universal APK, in the signed `SHA256SUMS`.
+  - **F-Droid:** store texts and screenshots in the repository (`fastlane/metadata/android/en-US` and `fr-FR`), a
+    merge request to `fdroiddata` with the build recipe (NDK, Go, OpenSSL and Unbound built from source). Its
+    volunteers review it with no announced delay; the app appears 24 to 48 hours after the merge. IzzyOnDroid,
+    which takes the APK from GitHub, in the meantime.
+  - **Google Play:** an `.aab`, the VpnService declaration with an in-app disclosure, the Data safety form ("no
+    data collected"), a privacy policy on offlok.org. A personal account created after 13 November 2023 first runs
+    a closed test with 12 testers for 14 days. Play's VpnService policy lists no DNS use, and says that "any
+    manipulation of ads that can impact monetization will result in rejection": **the Play version has no ad
+    blocking** (decided 2026-10-31): no "Ads" switch, no ad list. Trackers, malicious sites and the user's own lists
+    stay, unless Google's review refuses them. **F-Droid and GitHub ship the full app.** Two build flavours of the
+    same code, `full` and `play`.
+  - **offlok.org:** an Android card with the three sources.
+- **Tests:** the Go tests; then an Android emulator on GitHub's Linux runners: install, grant the VPN through
+  `appops`, resolve through the tunnel, DNSSEC, blocking, the root cut off, strict mode, off and the phone's DNS as
+  before. Then real phones.
+- **Limits, said in the app and on the site:** one VPN at a time; a Private DNS hostname bypasses OffLok; a resolver
+  running all day costs some battery (to measure).
+
+### iOS (later)
+
+- A Network Extension (packet tunnel) and the Apple Developer account. Memory and permission limits: *To verify*.
 
 ## Updates and security
 
@@ -408,7 +477,9 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 5. **Windows:** service, DNS plumbing, an installer with Unbound, runner tests, then real machines. SignPath
    application, after asking the maintainer.
 6. **macOS:** launchd, DNS plumbing, Homebrew tap, unsigned `.pkg`.
-7. **Later:** Android, iOS, the Apple Developer account and a signed `.pkg`.
+7. **Android:** the Go core with libunbound in a local VPN, the computers' window in a WebView, emulator tests,
+   then GitHub, F-Droid and Google Play.
+8. **Later:** iOS, the Apple Developer account and a signed `.pkg`.
 
 ## To verify while building (not verified yet)
 
@@ -428,6 +499,15 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 - **macOS:** how VPN clients override DNS, and whether `/etc/resolver` covers their split domains.
 - **Captive portals:** the OS signals OffLok can read on each platform (NetworkManager connectivity state, Windows
   Network List Manager, macOS captive network detection).
+- **Android:** whether libunbound applies every option of OffLok's template (prefetch, serve-stale, aggressive
+  NSEC, `auto-trust-anchor-file`, forward zones with TLS) read through `ub_ctx_config`.
+- **Android:** whether Android's captive portal check uses the network's own DNS while OffLok's tunnel is up, and
+  how Android's resolver behaves when TCP to the tunnel's address is reset.
+- **Android:** the foreground service type Android 14 and later require of a `VpnService`, and Google Play's
+  answer for a VPN that carries DNS only, to an on-phone resolver.
+- **Android:** whether F-Droid's build server builds Go, OpenSSL and Unbound for the NDK, and byte for byte the
+  same APK as ours.
+- **Android:** the battery a resolver running all day costs.
 - **VPNs:** a full-tunnel VPN that declares no domain. Should its DNS take over, or should recursion stay?
 - **Local root zone:** which sources allow transfers today, and whether to verify the zone with ZONEMD.
 - **Blocklists:** which lists, their licences, formats and sizes, and Unbound's memory use with them.
