@@ -1,6 +1,7 @@
 # offlok.org: the website (site/), built with the latest published release's download links and served by GitHub
-# Pages. At each push to main that changes it, after each successful run of the Release workflow (a release
-# published with GITHUB_TOKEN starts no workflow by itself), and by hand.
+# Pages. At each push to main that changes it (unless the push raises VERSION: then its release deploys it), after
+# each successful run of the Release workflow (a release published with GITHUB_TOKEN starts no workflow by itself),
+# and by hand.
 name: Website
 
 on:
@@ -24,21 +25,40 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      ready: ${{ steps.release.outputs.ready }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The links point at the latest release on GitHub, not at VERSION, which moves before a release is out.
-      - name: The pages
+      # The links point at the latest release on GitHub, not at VERSION, which moves before a release is out. A push
+      # that raises VERSION waits for its release, whose run deploys the site: its pages may offer files (a new
+      # platform's) that only the new release has.
+      - name: The release the links point at
+        id: release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: site/build.sh "$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+        run: |
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          echo "tag=$tag" >>"$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$tag" != "v$(cat VERSION)" ]; then
+            echo "VERSION $(cat VERSION) is not released yet (the latest is $tag): the Release workflow deploys the site."
+            echo "ready=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >>"$GITHUB_OUTPUT"
+          fi
 
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      - name: The pages
+        if: steps.release.outputs.ready == 'true'
+        run: site/build.sh "${{ steps.release.outputs.tag }}"
+
+      - if: steps.release.outputs.ready == 'true'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: bin/site
 
   deploy:
     needs: build
+    if: needs.build.outputs.ready == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:

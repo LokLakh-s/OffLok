@@ -17,6 +17,7 @@ $section
 ### Download
 
 - **Windows 10 (version 2004 or later) and 11, 64-bit:** \`offlok-$v-setup.exe\`
+- **macOS 13 or later, Apple silicon and Intel:** \`offlok-$v.pkg\` (not signed yet: open it once from System Settings › Privacy & Security, "Open Anyway")
 - **Debian, Ubuntu:** \`offlok_${v}_amd64.deb\` or \`_arm64.deb\`, and \`offlok-desktop_${v}_amd64.deb\` for the tray icon and window
 - **Fedora, openSUSE:** \`offlok-$v-1.x86_64.rpm\` or \`.aarch64.rpm\`, and \`offlok-desktop-$v-1.x86_64.rpm\`
 

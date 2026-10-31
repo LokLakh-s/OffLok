@@ -1,7 +1,7 @@
 # OffLok's releases: a tag v<VERSION> builds the Linux packages and the Windows installer, tests the installer on
-# one of GitHub's Windows machines, then publishes them on GitHub Releases with SHA256SUMS, signed with OffLok's
-# release key (docs/PLAN.md, "Updates and security"), and a build provenance attestation once the repository is
-# public.
+# one of GitHub's Windows machines, builds and tests the macOS package on one of its Macs, then publishes them on
+# GitHub Releases with SHA256SUMS, signed with OffLok's release key (docs/PLAN.md, "Updates and security"), and a
+# build provenance attestation once the repository is public.
 #
 # Every job runs on GitHub's own machines, never on a self-hosted one: SignPath, which will sign the Windows
 # programs, only signs what such a workflow built. The release key is the release environment's secret, which only v* tags reach.
@@ -93,8 +93,42 @@ jobs:
         shell: pwsh
         run: ./test/windows/test.ps1
 
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: OpenSSL's libraries, kept between runs of the same sources
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            bin/darwin/unbound-build/openssl-*-arm64
+            bin/darwin/unbound-build/openssl-*-x86_64
+            bin/darwin/unbound-build/*.tar.gz
+          key: macos-openssl-${{ hashFiles('packaging/macos/sources.env', 'packaging/macos/build-unbound.sh') }}
+
+      - name: Unbound, with OpenSSL linked in, and the package
+        run: |
+          ./packaging/macos/build-unbound.sh
+          ./packaging/macos/build-pkg.sh
+
+      - name: Install, check, uninstall
+        run: ./test/macos/test.sh
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-macos
+          path: dist/offlok-*.pkg
+          if-no-files-found: error
+          retention-days: 7
+
   publish:
-    needs: [build, windows]
+    needs: [build, windows, macos]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -108,7 +142,8 @@ jobs:
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: release
+          pattern: release*
+          merge-multiple: true
           path: dist
 
       # SHA256SUMS names every file with its hash; its signature is what the app checks before an update, and what
@@ -119,7 +154,7 @@ jobs:
         run: |
           cp packaging/release/offlok-release-*.pub.pem dist/
           cd dist
-          sha256sum -- *.deb *.rpm *.exe *.pem >SHA256SUMS
+          sha256sum -- *.deb *.rpm *.exe *.pkg *.pem >SHA256SUMS
           umask 077
           printf '%s\n' "$RELEASE_KEY" >"$RUNNER_TEMP/release.key"
           openssl pkeyutl -sign -inkey "$RUNNER_TEMP/release.key" -rawin -in SHA256SUMS -out SHA256SUMS.sig
@@ -135,6 +170,7 @@ jobs:
             dist/*.deb
             dist/*.rpm
             dist/*.exe
+            dist/*.pkg
 
       - name: The release
         env:
