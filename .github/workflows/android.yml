@@ -51,8 +51,10 @@ jobs:
             "platforms;android-$ANDROID_TARGET_API" "build-tools;$ANDROID_BUILD_TOOLS" >/dev/null
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >>"$GITHUB_ENV"
 
+      # Saved as soon as they are built: a later step's failure does not throw them away.
       - name: libunbound and OpenSSL, kept between runs of the same sources
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: native
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             internal/libunbound/_native
@@ -61,6 +63,14 @@ jobs:
 
       - name: libunbound and OpenSSL, with the NDK
         run: ./packaging/android/build-native.sh
+
+      - if: steps.native.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            internal/libunbound/_native
+            bin/android/native-build/*.tar.gz
+          key: ${{ steps.native.outputs.cache-primary-key }}
 
       - name: The Go core, for the app
         run: ./packaging/android/build-core.sh
