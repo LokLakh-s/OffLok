@@ -18,7 +18,10 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/miekg/dns"
 
 	"github.com/loklakh-s/offlok/internal/blocklist"
 	"github.com/loklakh-s/offlok/internal/front"
@@ -50,13 +53,17 @@ type Paths struct {
 
 // Daemon is one running offlokd.
 type Daemon struct {
-	Paths       Paths
-	Backend     sysdns.Backend
-	UnboundBin  string
-	UnboundUser string // account Unbound drops to; empty keeps root (tests only)
-	CABundle    string
-	Port        uint16 // the front's, on the loopback: 53
-	UnboundPort uint16 // Unbound's usual port, on 127.0.0.1 only, which the front alone asks
+	Paths      Paths
+	Backend    sysdns.Backend
+	UnboundBin string
+	// Engine makes the Unbound that reads the configuration file conf and answers at addr; nil: the unbound program
+	// at UnboundBin. UnboundVersion is then the engine's version.
+	Engine         func(conf string, addr netip.AddrPort, log func(line string)) unbound.Engine
+	UnboundVersion string
+	UnboundUser    string // account Unbound drops to; empty keeps root (tests only)
+	CABundle       string
+	Port           uint16 // the front's, on the loopback: 53
+	UnboundPort    uint16 // Unbound's usual port, on 127.0.0.1 only, which the front alone asks
 	// UnboundSpare are the ports Unbound takes when the usual one is not free: Windows reserves port ranges for
 	// Hyper-V, WSL and Docker at boot, anywhere between 49152 and 65535 by default.
 	UnboundSpare []uint16
@@ -66,6 +73,12 @@ type Daemon struct {
 	RootServers  []netip.AddrPort
 	Log          *log.Logger
 	Debug        bool // log every probe (never a looked-up name)
+	// Tick is how often the loop looks at the network without being told; 0: every 5 seconds. A phone's is longer:
+	// the app tells the core of every network change.
+	Tick time.Duration
+	// Changed, when set, hears of every change of state (on, fallback, off, failed...): Android's notification and
+	// Quick Settings tile follow it.
+	Changed func(Status)
 	// Authorize asks whether a peer who is not root may change settings (polkit on Linux, with a password prompt in
 	// its session); nil refuses.
 	Authorize func(ipc.Peer) (bool, error)
@@ -84,11 +97,12 @@ type Daemon struct {
 	release    *update.Release // the newer release found, signed
 
 	// Owned by the loop goroutine.
-	proc      *unbound.Process
+	ub        unbound.Engine
 	conf      []byte
 	front     *front.Server
-	listen    []netip.Addr // the front's
-	ubPort    uint16       // the port Unbound listens on: UnboundPort, or a spare one
+	serving   atomic.Pointer[front.Server] // the front, for Answer
+	listen    []netip.Addr                 // the front's
+	ubPort    uint16                       // the port Unbound listens on: UnboundPort, or a spare one
 	applied   bool
 	rootOK    bool
 	rootFails int
@@ -105,9 +119,11 @@ type Status struct {
 	State     State             `json:"state"`
 	Error     string            `json:"error,omitempty"`
 	ErrorCode string            `json:"error_code,omitempty"` // port-taken, unbound, self-test, system-dns, config
+	Warning   string            `json:"warning,omitempty"`    // the system's: android-private-dns, android-other-vpn
 	Signin    *time.Time        `json:"signin_until,omitempty"`
 	Blocking  BlockingStatus    `json:"blocking"`
 	Version   string            `json:"version,omitempty"` // offlokd's
+	Platform  string            `json:"platform"`          // the window leaves out what a platform does not have
 	Update    UpdateStatus      `json:"update"`
 	Backend   string            `json:"backend"`
 	Unbound   string            `json:"unbound"`
@@ -175,7 +191,9 @@ func (d *Daemon) Init() error {
 	d.wake, d.listWake, d.updateWake = make(chan struct{}, 1), make(chan struct{}, 1), make(chan struct{}, 1)
 	d.trusted = blocklist.NewSet(slices.Clone(s.Trusted))
 	d.mu.Unlock()
-	if v, err := unbound.Version(d.UnboundBin); err == nil {
+	if d.Engine != nil {
+		d.status.Unbound = d.UnboundVersion
+	} else if v, err := unbound.Version(d.UnboundBin); err == nil {
 		d.status.Unbound = v
 	}
 	if err := os.MkdirAll(d.Paths.State, 0o755); err != nil {
@@ -210,7 +228,11 @@ func (d *Daemon) Init() error {
 
 // Run drives OffLok until ctx ends, then gives the system DNS back and stops Unbound.
 func (d *Daemon) Run(ctx context.Context) {
-	t := time.NewTicker(tick)
+	every := d.Tick
+	if every == 0 {
+		every = tick
+	}
+	t := time.NewTicker(every)
 	defer t.Stop()
 	defer d.turnOff()
 	if d.Lists != nil {
@@ -222,8 +244,8 @@ func (d *Daemon) Run(ctx context.Context) {
 	for {
 		d.step(ctx)
 		var exited <-chan struct{}
-		if d.proc != nil {
-			exited = d.proc.Exited()
+		if d.ub != nil {
+			exited = d.ub.Exited()
 		}
 		select {
 		case <-ctx.Done():
@@ -234,6 +256,9 @@ func (d *Daemon) Run(ctx context.Context) {
 		}
 	}
 }
+
+// Wake makes the loop look at the network at once: the system told of a change (Android's app does).
+func (d *Daemon) Wake() { d.poke() }
 
 func (d *Daemon) poke() {
 	select {
@@ -248,7 +273,11 @@ func (d *Daemon) Status() Status {
 	defer d.mu.Unlock()
 	s := d.status
 	s.Settings = d.settings.Clone()
-	s.Version, s.Update = d.Version, d.upd
+	s.Version, s.Update, s.Platform = d.Version, d.upd, runtime.GOOS
+	s.Blocking.Categories = blocklist.Categories
+	if w, ok := d.Backend.(sysdns.Warner); ok {
+		s.Warning = w.Warning()
+	}
 	if !s.Settings.Updates && s.Update.State == "" {
 		s.Update = UpdateStatus{} // turned off: nothing to show
 	}
@@ -323,6 +352,7 @@ func (d *Daemon) Update(change func(*settings.Settings) error) error {
 func (d *Daemon) setStatus(state State, errMsg, errCode string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	changed := d.status.State != state || d.status.ErrorCode != errCode
 	if d.status.State != state {
 		d.status.Since = time.Now()
 		d.Log.Printf("state: %s", state)
@@ -330,6 +360,9 @@ func (d *Daemon) setStatus(state State, errMsg, errCode string) {
 	d.status.State, d.status.Error, d.status.ErrorCode = state, errMsg, errCode
 	d.status.Network = d.network
 	d.status.CheckedAt = time.Now()
+	if changed && d.Changed != nil {
+		go func() { d.Changed(d.Status()) }()
+	}
 }
 
 func (d *Daemon) step(ctx context.Context) {
@@ -345,9 +378,10 @@ func (d *Daemon) step(ctx context.Context) {
 	if time.Now().Before(d.retryAt) {
 		return
 	}
-	if d.proc != nil && !d.proc.Running() {
+	if d.ub != nil && !d.ub.Running() {
 		d.Log.Print("unbound stopped unexpectedly")
-		d.proc, d.conf = nil, nil
+		_ = d.ub.Stop(0) // what it leaves behind: libunbound's sockets
+		d.ub, d.conf = nil, nil
 	}
 	d.observe(ctx, s)
 	var err error
@@ -379,6 +413,9 @@ func (d *Daemon) observe(ctx context.Context, s settings.Settings) {
 	}
 	network = usable(network)
 	fp := netinfo.Fingerprint()
+	if f, ok := d.Backend.(sysdns.Fingerprinter); ok {
+		fp = f.Fingerprint()
+	}
 	ipv6 := netinfo.HasIPv6Route()
 	changed := fp != d.netPrint || !network.Equal(d.network) || ipv6 != d.ipv6
 	d.netPrint, d.network, d.ipv6 = fp, network, ipv6
@@ -437,7 +474,7 @@ func (d *Daemon) checkDoT(ctx context.Context, s settings.Settings) bool {
 func (d *Daemon) converge(ctx context.Context, s settings.Settings) (decision, error) {
 	dec := decide(situation{settings: s, rootOK: d.rootOK, dotOK: d.dotOK, signin: d.signinActive(), network: d.network})
 	listen := netinfo.Loopback()
-	if d.proc == nil {
+	if d.ub == nil {
 		d.ubPort = d.pickUnboundPort()
 	}
 	cfg := unbound.Config{
@@ -495,38 +532,46 @@ func (d *Daemon) validDomains() []string {
 
 // runUnbound starts Unbound, or reloads it when its configuration changed.
 func (d *Daemon) runUnbound(ctx context.Context, conf []byte) error {
-	if d.proc != nil && bytes.Equal(conf, d.conf) {
+	if d.ub != nil && bytes.Equal(conf, d.conf) {
 		return nil
 	}
 	if err := os.WriteFile(d.confPath(), conf, 0o644); err != nil {
 		return coded("config", err)
 	}
-	if d.proc == nil {
+	if d.ub == nil {
 		if err := portFree([]netip.Addr{d.unboundAddr().Addr()}, d.unboundAddr().Port()); err != nil {
 			return coded("port-taken", err)
 		}
-		p := &unbound.Process{Binary: d.UnboundBin, ConfPath: d.confPath(), Log: func(l string) { d.Log.Print("unbound: " + l) }}
-		if err := p.Start(); err != nil {
+		e := d.newEngine()
+		if err := e.Start(); err != nil {
 			return coded("unbound", err)
 		}
-		d.proc = p
-	} else if err := d.proc.Reload(); errors.Is(err, unbound.ErrNoReload) {
-		_ = d.proc.Stop(5 * time.Second)
-		d.proc = nil
+		d.ub = e
+	} else if err := d.ub.Reload(); errors.Is(err, unbound.ErrNoReload) {
+		_ = d.ub.Stop(5 * time.Second)
+		d.ub = nil
 		return d.runUnbound(ctx, conf)
 	} else if err != nil {
 		return coded("unbound", err)
 	}
 	d.conf = conf
-	if err := waitAlive(ctx, d.unboundAddr(), d.proc); err != nil {
-		_ = d.proc.Stop(5 * time.Second)
-		d.proc, d.conf = nil, nil
+	if err := waitAlive(ctx, d.unboundAddr(), d.ub); err != nil {
+		_ = d.ub.Stop(5 * time.Second)
+		d.ub, d.conf = nil, nil
 		return coded("unbound", err)
 	}
 	return nil
 }
 
-func waitAlive(ctx context.Context, addr netip.AddrPort, p *unbound.Process) error {
+func (d *Daemon) newEngine() unbound.Engine {
+	log := func(l string) { d.Log.Print("unbound: " + l) }
+	if d.Engine != nil {
+		return d.Engine(d.confPath(), d.unboundAddr(), log)
+	}
+	return &unbound.Process{Binary: d.UnboundBin, ConfPath: d.confPath(), Log: log}
+}
+
+func waitAlive(ctx context.Context, addr netip.AddrPort, p unbound.Engine) error {
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		if err := probe.Alive(ctx, addr); err == nil {
@@ -603,6 +648,7 @@ func (d *Daemon) runFront(listen []netip.Addr) error {
 		return nil
 	}
 	if d.front != nil {
+		d.serving.Store(nil)
 		d.front.Stop()
 	}
 	addrs := make([]netip.AddrPort, len(listen))
@@ -615,7 +661,21 @@ func (d *Daemon) runFront(listen []netip.Addr) error {
 		return coded("port-taken", fmt.Errorf("%v is already used by another program (another resolver, such as unbound.service or dnsmasq?): %v", addrs, err))
 	}
 	d.front, d.listen = f, listen
+	d.serving.Store(f)
 	return nil
+}
+
+// Answer answers one query as the front does, for a system that hands its queries over instead of asking on the
+// loopback (Android's tunnel): a SERVFAIL while the front is down.
+func (d *Daemon) Answer(w dns.ResponseWriter, q *dns.Msg) {
+	if f := d.serving.Load(); f != nil {
+		f.ServeDNS(w, q)
+		return
+	}
+	r := new(dns.Msg)
+	r.SetRcode(q, dns.RcodeServerFailure)
+	r.RecursionAvailable = true
+	_ = w.WriteMsg(r)
 }
 
 // turnOff gives the system DNS back, then stops the front and Unbound. Restoring is idempotent and also undoes
@@ -628,12 +688,13 @@ func (d *Daemon) turnOff() {
 		d.Log.Print("system DNS given back")
 	}
 	if d.front != nil {
+		d.serving.Store(nil)
 		d.front.Stop()
 		d.front = nil
 	}
-	if d.proc != nil {
-		_ = d.proc.Stop(5 * time.Second)
-		d.proc, d.conf = nil, nil
+	if d.ub != nil {
+		_ = d.ub.Stop(5 * time.Second)
+		d.ub, d.conf = nil, nil
 	}
 }
 

@@ -15,8 +15,8 @@ const (
 	Custom    Category = "custom" // the lists the user adds by their address
 )
 
-// Categories in the order the apps show them.
-var Categories = []Category{Ads, Trackers, Malicious, Custom}
+// Categories in the order the apps show them. The ads come first, in builds that offer them (ads.go).
+var Categories = []Category{Trackers, Malicious, Custom}
 
 // Source is one list.
 type Source struct {
@@ -34,9 +34,6 @@ func registry(n int) string {
 // Sources are the lists OffLok offers (chosen on 29/10/2026, licences checked that day), downloaded by the
 // computer itself once a day. They are never shipped with OffLok.
 var Sources = map[Category][]Source{
-	Ads: {
-		{ID: "adguard-dns", Name: "AdGuard DNS filter", URL: registry(1), Licence: "GPL-3.0", Home: "https://github.com/AdguardTeam/AdGuardSDNSFilter"},
-	},
 	Trackers: {
 		{ID: "shadowwhisperer-tracking", Name: "ShadowWhisperer Tracking List", URL: registry(69), Licence: "Unlicense", Home: "https://github.com/ShadowWhisperer/BlockLists"},
 		{ID: "hagezi-windows", Name: "HaGeZi's Windows/Office Tracker Blocklist", URL: registry(63), Licence: "GPL-3.0", Home: "https://github.com/hagezi/dns-blocklists"},

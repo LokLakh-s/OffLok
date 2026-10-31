@@ -298,3 +298,5 @@ footer {
   color: var(--red);
 }
 [hidden] { display: none !important; }
+/* Android has one user and updates through its store: no settings access, no updates switch. */
+:root[data-platform="android"] .computers { display: none !important; }

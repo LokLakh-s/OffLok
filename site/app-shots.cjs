@@ -18,12 +18,8 @@ const [base, out] = process.argv.slice(2);
           .replace(/\{ category: "ads"[^}]*\},/, "")
           .replace(/trusted: \[[^\]]*\],/, "trusted: [],")
           .replace(/custom_lists: \[[^\]]*\],/, "custom_lists: [],")
-          .replace(/\{ category: "custom"[^}]*\},/, '{ category: "malicious", name: "URLhaus", names: 9214 },');
-        await route.fulfill({ response: res, body });
-      });
-      await page.route("**/main.js", async (route) => {
-        const res = await route.fetch();
-        const body = (await res.text()).replace('const categories = ["ads", ', "const categories = [");
+          .replace(/\{ category: "custom"[^}]*\},/, '{ category: "malicious", name: "URLhaus", names: 9214 },')
+          .replace("blocking: {\n      lists: [", 'blocking: {\n      categories: ["trackers", "malicious", "custom"],\n      lists: [');
         await route.fulfill({ response: res, body });
       });
       await page.goto(`${base}/index.html?preview=blocking`);

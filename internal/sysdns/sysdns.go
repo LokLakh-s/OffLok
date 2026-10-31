@@ -32,6 +32,18 @@ type Backend interface {
 	Network() (Network, error)
 }
 
+// Fingerprinter is a backend that knows a new network better than the interfaces tell it: Android's app sandbox
+// hides them, and its app hears of every network change.
+type Fingerprinter interface {
+	Fingerprint() string
+}
+
+// Warner is a backend with something to tell in the window: on Android, a Private DNS hostname that sends every
+// query around OffLok, or another VPN app that took OffLok's place.
+type Warner interface {
+	Warning() string
+}
+
 // Flusher is a backend whose resolver keeps a cache of its own (systemd-resolved): emptied when the blocking
 // changes, so that a site just trusted answers at once.
 type Flusher interface {

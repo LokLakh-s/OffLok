@@ -34,6 +34,7 @@ function translateStatic() {
 
 function render(st) {
   const state = st.state || "starting";
+  if (st.platform) document.documentElement.dataset.platform = st.platform;
   const head = $(".status");
   head.dataset.state = state;
   head.dataset.tone = tones[state] || "grey";
@@ -91,7 +92,8 @@ function renderUpdate(u) {
   $(".update-actions").hidden = busy && !u.page;
 }
 
-const categories = ["ads", "trackers", "malicious", "custom"];
+// The categories this build offers (Google Play's has no ads); the preview's made-up status names none.
+const offered = (st) => st.blocking?.categories || ["ads", "trackers", "malicious", "custom"];
 let lastStatus = {};
 
 function el(tag, attrs = {}, ...children) {
@@ -126,8 +128,8 @@ function categoryRow(cat, st) {
 }
 
 function renderBlocking(st) {
-  $(".cats").replaceChildren(...categories.map((c) => categoryRow(c, st)));
-  const anyOn = categories.some((c) => st.settings?.blocking?.[c]);
+  $(".cats").replaceChildren(...offered(st).map((c) => categoryRow(c, st)));
+  const anyOn = offered(st).some((c) => st.settings?.blocking?.[c]);
   const paused = st.blocking?.paused_until ? new Date(st.blocking.paused_until) : null;
   const pause = $("[data-action=pause]");
   pause.hidden = !anyOn;

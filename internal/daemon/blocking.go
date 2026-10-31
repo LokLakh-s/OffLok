@@ -22,6 +22,7 @@ const (
 
 // BlockingStatus is the blocking's part of the status.
 type BlockingStatus struct {
+	Categories  []blocklist.Category   `json:"categories"` // those this build offers: no ads on Google Play
 	PausedUntil *time.Time             `json:"paused_until,omitempty"`
 	Lists       []blocklist.SourceInfo `json:"lists,omitempty"`
 }
