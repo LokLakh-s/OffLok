@@ -502,7 +502,9 @@ test/release/         the update tests' key (public, trusted by test builds alon
 docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code signing policy at the root
 ```
 
-- **Identity:** commits use `LokLakh <contact@loklakh.fr>`.
+- **Identity:** commits are the maintainer's GitHub account, `Klakh <6003117+Klakh@users.noreply.github.com>`, signed
+  with an SSH key (decided 2026-11-01: a project people run with administrator rights shows who maintains it).
+  Those before, `LokLakh <contact@loklakh.fr>`, link to the same account once that address is verified on it.
 - **CI:** GitHub-hosted runners on Linux, Windows and macOS. They run the unit tests, the integration
   tests in containers, and an install → resolve → update → uninstall → original-settings-restored test on each
   platform.
