@@ -5,44 +5,9 @@
 # uninstalls with the package's script and checks that every network service has its original DNS back.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
+. test/macos/lib.sh
 
-libexec=/usr/local/libexec/offlok
-offlok=/usr/local/bin/offlok
 conf="/Library/Application Support/OffLok/unbound/unbound.conf"
-passed=0
-failed=0
-
-check() {
-	local name=$1
-	shift
-	if "$@"; then
-		echo "ok    $name"
-		passed=$((passed + 1))
-	else
-		echo "FAIL  $name"
-		failed=$((failed + 1))
-	fi
-}
-
-wait_until() {
-	local secs=$1
-	shift
-	for ((i = 0; i < secs; i++)); do
-		"$@" && return 0
-		sleep 1
-	done
-	return 1
-}
-
-services() { networksetup -listallnetworkservices | tail -n +2 | sed 's/^\*//'; }
-
-dns_snapshot() {
-	services | while IFS= read -r s; do
-		printf '%s: %s\n' "$s" "$(networksetup -getdnsservers "$s" | tr '\n' ' ')"
-	done
-}
-
-status_is() { "$offlok" status | head -1 | grep -Eq "^($1)"; }
 
 # Every service's DNS is loopback addresses only, 127.0.0.1 among them.
 all_offlok() {
@@ -59,7 +24,6 @@ unbounds() { ps -axo user=,command= | grep -F -- "-d -c $conf" | grep -v grep; }
 
 # Each check is a function: a `bash -c` would not see this script's functions, and would pass for nothing.
 launchd_runs() { sudo launchctl print system/org.loklakh.offlokd 2>/dev/null | grep -q "state = running"; }
-launchd_has_none() { ! sudo launchctl print system/org.loklakh.offlokd >/dev/null 2>&1; }
 system_resolver_is_offlok() {
 	scutil --dns | awk '/^resolver #1/ {f = 1} f && /nameserver\[0\]/ {print $3; exit}' | grep -qx 127.0.0.1
 }
@@ -81,7 +45,6 @@ resolves_through_network() { dig @127.0.0.1 +short example.org A | grep -Eq '^[0
 no_account() { ! id _offlok >/dev/null 2>&1; }
 pkg_registered() { pkgutil --pkgs | grep -qx org.loklakh.offlok; }
 unbound_is_packaged() { unbounds | grep -qF "$libexec/unbound/unbound -d -c"; }
-app_runs() { pgrep -x offlok-desktop >/dev/null; }
 no_programs() { [ ! -e "$libexec" ] && [ ! -e "$offlok" ] && [ ! -e /Applications/OffLok.app ] && ! pkg_registered; }
 no_files() { [ ! -e "/Library/Application Support/OffLok" ] && [ ! -e /Library/LaunchDaemons/org.loklakh.offlokd.plist ]; }
 
@@ -157,5 +120,4 @@ echo "# DNS after:"
 echo "$after"
 check 'every network service has its original DNS back' [ "$before" = "$after" ]
 
-echo "# $passed passed, $failed failed"
-[ "$failed" -eq 0 ]
+summary

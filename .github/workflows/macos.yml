@@ -2,7 +2,8 @@
 # included), Unbound built with OpenSSL (packaging/macos/build-unbound.sh, OpenSSL's libraries kept between runs),
 # the package (build-pkg.sh), then test/macos/test.sh installs it as a user would and checks the launchd service,
 # the menu bar app, every network service's DNS, DNSSEC, blocking, a crash, the fallback and strict mode behind pf,
-# and the uninstall. Apart from the CI (which takes 25 minutes on Linux first): this needs none of it.
+# and the uninstall; then an update from one test release to the next (test/macos/update.sh). Apart from the CI
+# (which takes 25 minutes on Linux first): this needs none of it.
 name: macOS
 
 on:
@@ -50,15 +51,25 @@ jobs:
       - name: The package
         run: ./packaging/macos/build-pkg.sh
 
+      - name: The app's icon, as macOS shows it
+        run: swift test/macos/render-icon.swift bin/darwin/pkg/root/Applications/OffLok.app dist/icon-as-shown.png
+
       - name: Keep the package a day (to try it on a Mac)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-package
-          path: dist/offlok-*.pkg
+          path: |
+            dist/offlok-*.pkg
+            dist/icon-as-shown.png
           retention-days: 1
 
       - name: Install, check, uninstall
         run: ./test/macos/test.sh
+
+      - name: An update from one test release to the next
+        run: |
+          ./test/update-builds.sh macos
+          ./test/macos/update.sh
 
       - name: offlokd's log, when something failed
         if: failure()

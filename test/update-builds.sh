@@ -3,6 +3,7 @@
 # version, and B, the next patch, into dist/update-test/ with a.version and b.version.
 #   test/update-builds.sh linux    the amd64 .deb (OffLok's Go image), for test/integration/run.sh update
 #   test/update-builds.sh windows  the installers (packaging/linux/desktop-build's image), for test/windows/update.ps1
+#   test/update-builds.sh macos    the packages, on a Mac after build-unbound.sh, for test/macos/update.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 A=$(cat VERSION)
@@ -15,6 +16,7 @@ for v in "$A" "$B"; do
 	case "$1" in
 	linux) VERSION=$v ARCHS=amd64 BIN=bin/update-test ./packaging/linux/build.sh ;;
 	windows) VERSION=$v ./packaging/windows/build.sh ;;
-	*) echo "usage: $0 linux|windows" >&2 && exit 2 ;;
+	macos) VERSION=$v ./packaging/macos/build-pkg.sh ;;
+	*) echo "usage: $0 linux|windows|macos" >&2 && exit 2 ;;
 	esac
 done
