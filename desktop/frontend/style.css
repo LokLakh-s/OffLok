@@ -139,6 +139,19 @@ main {
   background: var(--teal-soft);
 }
 .update .sub.failed { color: var(--red); }
+
+/* What the phone does around OffLok (Android): its Private DNS setting, another VPN. */
+.warning {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--orange);
+  background: var(--orange-soft);
+}
+.warning p { margin: 0; }
+.warning-actions { display: flex; justify-content: flex-end; }
 .update-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* Strict mode and a captive portal: the one big button. */

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">OffLok</string>
+    <string name="channel_status">Status</string>
+    <string name="channel_status_text">Whether OffLok answers your phone\'s DNS, while it does.</string>
+    <!-- The window's titles (desktop/frontend/strings.js). -->
+    <string name="state_starting">Starting</string>
+    <string name="state_direct">You are your own DNS</string>
+    <string name="state_fallback_dot">Using your encrypted resolver</string>
+    <string name="state_fallback_network">Using this network\'s DNS</string>
+    <string name="state_strict_blocked">Strict mode: public names are blocked</string>
+    <string name="state_offline">No network</string>
+    <string name="state_off">OffLok is off</string>
+    <string name="state_error">Something went wrong</string>
+    <string name="tile_on">On</string>
+    <string name="tile_fallback">Fallback</string>
+    <string name="tile_off">Off</string>
+    <string name="tile_error">Error</string>
+    <string name="vpn_refused">OffLok needs Android\'s permission to start its VPN, which carries only your phone\'s DNS queries.</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="channel_status">État</string>
+    <string name="channel_status_text">Si OffLok répond au DNS de ton téléphone, tant qu\'il le fait.</string>
+    <string name="state_starting">Démarrage</string>
+    <string name="state_direct">Tu es ton propre DNS</string>
+    <string name="state_fallback_dot">Repli sur ton résolveur chiffré</string>
+    <string name="state_fallback_network">Repli sur le DNS de ce réseau</string>
+    <string name="state_strict_blocked">Mode strict : noms publics bloqués</string>
+    <string name="state_offline">Pas de réseau</string>
+    <string name="state_off">OffLok est éteint</string>
+    <string name="state_error">Un souci</string>
+    <string name="tile_on">Allumé</string>
+    <string name="tile_fallback">Repli</string>
+    <string name="tile_off">Éteint</string>
+    <string name="tile_error">Erreur</string>
+    <string name="vpn_refused">OffLok a besoin de l\'accord d\'Android pour lancer son VPN, qui ne transporte que les requêtes DNS de ton téléphone.</string>
+</resources>

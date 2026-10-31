@@ -14,6 +14,7 @@ export const strings = {
     "state.offline.text": "OffLok answers with what it remembers.",
     "state.off.title": "OffLok is off",
     "state.off.text": "Your computer uses its original DNS.",
+    "state.off.text.android": "Your phone uses its network's DNS.",
     "state.error.title": "Something went wrong",
     "state.error.text": "{error}. Your original DNS is back, OffLok tries again in a minute.",
     "state.error.strict": "{error}. Strict mode: your DNS stays on OffLok, OffLok tries again in a minute.",
@@ -25,6 +26,11 @@ export const strings = {
     "chip.off": "Off",
     "chip.error": "Error",
     "chip.offline": "Offline",
+    "warning.android-private-dns":
+      "Android's Private DNS is set to a hostname: every query goes to that server, around OffLok. Set it to Off or Automatic for OffLok to answer.",
+    "warning.android-other-vpn":
+      "Another VPN app started, or OffLok's VPN was turned off in Android's settings: Android runs one VPN at a time, so OffLok turned off. Turn it on to take that VPN's place.",
+    "warning.settings": "Open Android's settings",
     "signin.button": "Sign in to this network",
     "signin.text": "Lets this network's DNS through for 5 minutes, the time to open its sign-in page.",
     "signin.active": "This network's DNS is let through for {minutes} more minutes.",
@@ -90,9 +96,11 @@ export const strings = {
     "trusted.remove": "Remove {site}",
     "error.not-running": "The OffLok service is not running.",
     "error.code.port-taken": "Another program already answers DNS on this computer (127.0.0.1:53)",
+    "error.code.port-taken.android": "Another app already uses OffLok's ports on this phone (127.0.0.1:10053)",
     "error.code.unbound": "Unbound does not start",
     "error.code.self-test": "The check after the last change failed",
     "error.code.system-dns": "The system DNS could not be changed",
+    "error.code.system-dns.android": "Android did not let OffLok start its VPN",
     "error.code.config": "Unbound's settings could not be written",
     "error.denied": "Administrator rights are needed.",
   },
@@ -109,6 +117,7 @@ export const strings = {
     "state.offline.text": "OffLok répond avec ce qu'il a en mémoire.",
     "state.off.title": "OffLok est éteint",
     "state.off.text": "Ton ordinateur utilise son DNS d'origine.",
+    "state.off.text.android": "Ton téléphone utilise le DNS de son réseau.",
     "state.error.title": "Un souci",
     "state.error.text": "{error}. Ton DNS d'origine est revenu, OffLok réessaie dans une minute.",
     "state.error.strict": "{error}. Mode strict : ton DNS reste sur OffLok, qui réessaie dans une minute.",
@@ -120,6 +129,11 @@ export const strings = {
     "chip.off": "Éteint",
     "chip.error": "Erreur",
     "chip.offline": "Hors ligne",
+    "warning.android-private-dns":
+      "Le DNS privé d'Android est réglé sur un nom d'hôte : toutes les requêtes partent vers ce serveur, en contournant OffLok. Règle-le sur Désactivé ou Automatique pour qu'OffLok réponde.",
+    "warning.android-other-vpn":
+      "Une autre appli VPN a démarré, ou le VPN d'OffLok a été coupé dans les réglages d'Android : Android ne fait tourner qu'un VPN à la fois, donc OffLok s'est éteint. Rallume-le pour reprendre la place de cet autre VPN.",
+    "warning.settings": "Ouvrir les réglages d'Android",
     "signin.button": "Se connecter à ce réseau",
     "signin.text": "Laisse passer le DNS de ce réseau 5 minutes, le temps d'ouvrir sa page de connexion.",
     "signin.active": "Le DNS de ce réseau passe encore {minutes} minutes.",
@@ -185,9 +199,11 @@ export const strings = {
     "trusted.remove": "Retirer {site}",
     "error.not-running": "Le service OffLok ne tourne pas.",
     "error.code.port-taken": "Un autre programme répond déjà au DNS sur cet ordinateur (127.0.0.1:53)",
+    "error.code.port-taken.android": "Une autre appli utilise déjà les ports d'OffLok sur ce téléphone (127.0.0.1:10053)",
     "error.code.unbound": "Unbound ne démarre pas",
     "error.code.self-test": "La vérification après le dernier changement a échoué",
     "error.code.system-dns": "Le DNS du système n'a pas pu être changé",
+    "error.code.system-dns.android": "Android n'a pas laissé OffLok lancer son VPN",
     "error.code.config": "Les réglages d'Unbound n'ont pas pu être écrits",
     "error.denied": "Il faut les droits d'administrateur.",
   },
@@ -198,7 +214,14 @@ export function lang() {
   return strings[l] ? l : "en";
 }
 
+// The platform the status names: a key may have its own words there (key.android).
+let platform = "";
+export function setPlatform(p) {
+  platform = p || "";
+}
+
 export function t(key, vars = {}) {
-  const msg = strings[lang()][key] ?? strings.en[key] ?? key;
+  const own = platform ? (strings[lang()][`${key}.${platform}`] ?? strings.en[`${key}.${platform}`]) : undefined;
+  const msg = own ?? strings[lang()][key] ?? strings.en[key] ?? key;
   return msg.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }

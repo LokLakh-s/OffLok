@@ -3,8 +3,14 @@
 package libunbound
 
 /*
+#cgo android,arm64 CFLAGS: -I${SRCDIR}/_native/arm64-v8a/include
+#cgo android,arm64 LDFLAGS: -L${SRCDIR}/_native/arm64-v8a/lib
+#cgo android,arm CFLAGS: -I${SRCDIR}/_native/armeabi-v7a/include
+#cgo android,arm LDFLAGS: -L${SRCDIR}/_native/armeabi-v7a/lib
+#cgo android,amd64 CFLAGS: -I${SRCDIR}/_native/x86_64/include
+#cgo android,amd64 LDFLAGS: -L${SRCDIR}/_native/x86_64/lib
 #cgo LDFLAGS: -lunbound
-#cgo android LDFLAGS: -lssl -lcrypto
+#cgo android LDFLAGS: -lssl -lcrypto -ldl
 #include <stdlib.h>
 #include "shim.h"
 */

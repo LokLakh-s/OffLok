@@ -1,5 +1,6 @@
-// The window's backend. In the app, the Go side answers through Wails; with ?preview=<state> in the address, made-up
-// data stands in (screenshots, design reviews). Errors carry .denied or .notRunning for the window's messages.
+// The window's backend. In the computers' app, the Go side answers through Wails; in Android's, the app's core
+// answers through the OffLokAndroid bridge; with ?preview=<state> in the address, made-up data stands in
+// (screenshots, design reviews). Errors carry .denied or .notRunning for the window's messages.
 const params = new URLSearchParams(location.search);
 const preview = params.get("preview");
 if (params.get("theme")) document.documentElement.dataset.theme = params.get("theme");
@@ -15,6 +16,9 @@ const examples = {
   off: { state: "off" },
   error: { state: "error", error: "127.0.0.1:53 is already used by another program", error_code: "port-taken" },
   update: { state: "direct", update: { available: "0.6.0", page: "https://github.com/LokLakh-s/OffLok/releases/tag/v0.6.0" } },
+  android: { state: "direct", platform: "android", backend: "android" },
+  "android-private-dns": { state: "direct", platform: "android", backend: "android", warning: "android-private-dns" },
+  "android-other-vpn": { state: "off", platform: "android", backend: "android", warning: "android-other-vpn" },
   updating: { state: "direct", update: { available: "0.6.0", state: "downloading" } },
   blocking: {
     state: "direct",
@@ -55,13 +59,37 @@ function made_up_check(site) {
     : { name, blocked: false };
 }
 
-// The app's Go service (desktop/main.go, App), through the runtime Wails serves. Imported only in the app: the
-// preview has no Wails.
+// Android's app (android/app/.../MainActivity.kt): each call gets its answer later, through offlokAnswer, as the
+// first "on" waits for the user to let OffLok start a VPN.
+const android = globalThis.OffLokAndroid;
+const waiting = new Map();
+let nextCall = 0;
+globalThis.offlokAnswer = (id, result) => {
+  waiting.get(id)?.(JSON.parse(result));
+  waiting.delete(id);
+};
+function androidCall(cmd, value) {
+  return new Promise((resolve) => {
+    const id = ++nextCall;
+    waiting.set(id, resolve);
+    android.call(id, cmd, value);
+  });
+}
+
+// The app's Go service (desktop/main.go, App), through the runtime Wails serves, or Android's core. Imported only in
+// the computers' app: the preview has no Wails.
 let runtime;
 async function call(method, ...args) {
-  runtime ??= await import("/wails/runtime.js").catch(() => null);
-  if (!runtime) throw Object.assign(new Error("no backend"), { notRunning: true });
-  const r = await runtime.Call.ByName(`main.App.${method}`, ...args);
+  let r;
+  if (android) {
+    if (method === "OpenNotes") return { ok: true }; // Android's stores update the app
+    const [cmd, value = ""] = method === "Status" ? ["status"] : args;
+    r = await androidCall(cmd, value);
+  } else {
+    runtime ??= await import("/wails/runtime.js").catch(() => null);
+    if (!runtime) throw Object.assign(new Error("no backend"), { notRunning: true });
+    r = await runtime.Call.ByName(`main.App.${method}`, ...args);
+  }
   if (!r.ok) throw Object.assign(new Error(r.error || "error"), { denied: r.denied, notRunning: r.not_running });
   return r;
 }
@@ -72,6 +100,7 @@ export const api = preview
       send: async () => made_up(preview),
       check: async (site) => made_up_check(site),
       notes: async () => {},
+      settings: () => {},
     }
   : {
       status: async () => (await call("Status")).status,
@@ -80,4 +109,5 @@ export const api = preview
       notes: async () => {
         await call("OpenNotes");
       },
+      settings: (which) => android?.openSettings(which),
     };

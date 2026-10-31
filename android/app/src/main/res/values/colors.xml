@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window's background (desktop/frontend/style.css, --bg), behind it while it loads. -->
+    <color name="background">#f4f7f7</color>
+    <color name="teal">#0f9c8f</color>
+</resources>

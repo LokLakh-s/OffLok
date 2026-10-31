@@ -2,7 +2,8 @@
 fallback and error: an orange or red dot at the bottom right; off: the mark in grey, chosen on 29/10/2026), the app
 icon in the desktop's sizes (the mark alone on transparency, 94 % of the square), the Mac's icon on a tile (the
 Dock expects one, and macOS 26 shuts a round icon in a grey square: very dark teal, the mark at 72 %, chosen on
-31/10/2026), the window's mark, and the website's images.
+31/10/2026), Android's adaptive icon on the same tile and its notification's icon, the window's mark, and the
+website's images.
 Run from the repository: python3 scripts/brand-icons.py"""
 import os
 
@@ -73,6 +74,50 @@ def mac_tile(src: Image.Image) -> Image.Image:
     return out
 
 
+def tile_background(size: int) -> Image.Image:
+    """The Mac tile's very dark teal, lit at its centre, as a full square: Android's adaptive icon's background."""
+    t = np.linspace(-1, 1, size)
+    x, y = np.meshgrid(t, t)
+    r = np.clip(np.sqrt(x ** 2 + (y + 0.1) ** 2) / 1.25, 0, 1)[..., None]
+    return Image.fromarray((np.array([14, 58, 58]) * (1 - r) + np.array([3, 13, 14]) * r).astype(np.uint8), "RGB").convert("RGBA")
+
+
+def silhouette(src: Image.Image) -> Image.Image:
+    """The mark's bright strokes (the ring, the tree) in white, the dark disk inside the ring left out: what Android
+    draws in one colour (the notification's icon, themed app icons)."""
+    a = np.asarray(src).astype(float)
+    luma = a[..., :3] @ np.array([0.3, 0.59, 0.11])
+    alpha = a[..., 3] * np.clip((luma - 40) / 40, 0, 1)  # the disk stays under 31, the ring over 94
+    out = np.zeros(a.shape, np.uint8)
+    out[..., :3] = 255
+    out[..., 3] = alpha.clip(0, 255).astype(np.uint8)
+    return Image.fromarray(out, "RGBA")
+
+
+# Android's densities: the factor over mdpi's pixels.
+DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
+
+
+def android_icons(mark: Image.Image, bold: Image.Image, res: str, play_icon: str):
+    """The adaptive icon's layers (108 dp, the mark at 50 %: 54 dp, three quarters of the 72 dp a launcher shows, as
+    on the Mac's tile, and inside the 66 dp every launcher's mask keeps), the
+    monochrome layer of themed icons, the notification's 24 dp icon (from the bold mark), and Google Play's 512 px
+    icon (a full square: Play rounds its corners)."""
+    for d, f in DENSITIES.items():
+        os.makedirs(f"{res}/mipmap-{d}", exist_ok=True)
+        os.makedirs(f"{res}/drawable-{d}", exist_ok=True)
+        px = round(108 * f)
+        tile_background(px).convert("RGB").save(f"{res}/mipmap-{d}/ic_launcher_background.png", optimize=True)
+        padded(mark, px, 0.5).save(f"{res}/mipmap-{d}/ic_launcher_foreground.png", optimize=True)
+        padded(silhouette(mark), px, 0.5).save(f"{res}/mipmap-{d}/ic_launcher_monochrome.png", optimize=True)
+        n = round(24 * f)
+        padded(silhouette(bold if n <= 48 else mark), n, 0.92).save(f"{res}/drawable-{d}/ic_notification.png", optimize=True)
+    icon = tile_background(512)
+    icon.alpha_composite(padded(mark, 512, 0.5 * 108 / 72))
+    os.makedirs(os.path.dirname(play_icon), exist_ok=True)
+    icon.convert("RGB").save(play_icon, optimize=True)
+
+
 if __name__ == "__main__":
     # The tray takes one picture and scales it: 64 px drawn from 1024, the dot drawn at that size.
     small = Image.open(SMALL).convert("RGBA").resize((256, 256), Image.LANCZOS)
@@ -110,4 +155,5 @@ if __name__ == "__main__":
     tray = bold.resize((384, 384), Image.LANCZOS)
     for name, img in {"on": tray, "fallback": badge(tray, ORANGE), "error": badge(tray, RED), "off": grey(tray)}.items():
         img.resize((96, 96), Image.LANCZOS).save(f"site/img/state-{name}.png", optimize=True)
-    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png, packaging/windows/offlok.ico, packaging/macos/offlok.iconset/, site/")
+    android_icons(mark, bold, "android/app/src/main/res", "fastlane/metadata/android/en-US/images/icon.png")
+    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png, packaging/windows/offlok.ico, packaging/macos/offlok.iconset/, site/, android/app/src/main/res/, fastlane/metadata/android/en-US/images/icon.png")

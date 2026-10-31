@@ -1,6 +1,6 @@
 // The window: shows offlokd's status and sends its commands. The backend is the Go app (api.js); ?preview=<state>
 // shows made-up data instead, for screenshots.
-import { t } from "./strings.js";
+import { setPlatform, t } from "./strings.js";
 import { api } from "./api.js";
 
 const $ = (s) => document.querySelector(s);
@@ -35,6 +35,7 @@ function translateStatic() {
 function render(st) {
   const state = st.state || "starting";
   if (st.platform) document.documentElement.dataset.platform = st.platform;
+  setPlatform(st.platform);
   const head = $(".status");
   head.dataset.state = state;
   head.dataset.tone = tones[state] || "grey";
@@ -47,6 +48,10 @@ function render(st) {
   let text = t(`state.${state}.text`, { dot, error });
   if (state === "error" && st.settings?.strict) text = t("state.error.strict", { error });
   $(".text").textContent = text;
+
+  const warning = st.warning || "";
+  $(".warning").hidden = !warning;
+  if (warning) $(".warning p").textContent = t(`warning.${warning}`);
 
   const signin = $(".signin");
   signin.hidden = state !== "strict-blocked" && !st.signin_until;
@@ -232,6 +237,10 @@ $(".dot").addEventListener("submit", (e) => {
   if (v) act("dot", v);
 });
 refresh();
+$("[data-action=settings]").addEventListener("click", () =>
+  api.settings(lastStatus.warning === "android-other-vpn" ? "vpn" : "network"),
+);
+globalThis.offlokRefresh = refresh; // Android's app, back in front
 setInterval(refresh, 3000);
 // ?check=<site> runs "Is this site blocked?" at once (screenshots).
 const preset = new URLSearchParams(location.search).get("check");

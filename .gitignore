@@ -2,3 +2,10 @@
 /dist/
 /.secrets/
 *.syso
+/internal/libunbound/_native/
+/android/app/libs/
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/app/build/
+/android/local.properties
