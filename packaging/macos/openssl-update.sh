@@ -1,9 +1,9 @@
 #!/bin/bash
-# Looks for an OpenSSL newer than the one the macOS package links into Unbound (sources.env), in the same series
-# (3.5, OpenSSL's long-term support release, until 2030-04-08). When OpenSSL released one, checks its OpenPGP
-# signature by OpenSSL's key (openssl-release.asc, fingerprint below) and the SHA-256 OpenSSL published, pins it in
-# sources.env and adds it to CHANGELOG.md, as unbound-update.sh does for Unbound. Prints the new OpenSSL's version,
-# or nothing when the pinned one is the series' latest, and writes the pull request's text to
+# Looks for an OpenSSL newer than the one the macOS package and the Android app link into Unbound (sources.env), in
+# the same series (3.5, OpenSSL's long-term support release, until 2030-04-08). When OpenSSL released one, checks
+# its OpenPGP signature by OpenSSL's key (openssl-release.asc, fingerprint below) and the SHA-256 OpenSSL published,
+# pins it in sources.env and adds it to CHANGELOG.md, as unbound-update.sh does for Unbound. Prints the new
+# OpenSSL's version, or nothing when the pinned one is the series' latest, and writes the pull request's text to
 # dist/openssl-update.md. Needs gh (GitHub's API: OpenSSL publishes its releases there). Run from the repository's
 # root; .github/workflows/unbound.yml does the rest.
 #   --from <version>: a test, as if that OpenSSL were pinned.
@@ -45,11 +45,11 @@ sed -i -e "s/^OPENSSL_VERSION=.*/OPENSSL_VERSION=$latest/" -e "s/^OPENSSL_SHA256
 cves=$(gh api "repos/openssl/openssl/releases/tags/openssl-$latest" --jq .body | grep -oE 'CVE-[0-9]+-[0-9]+' |
 	sort -u | paste -sd, - | sed 's/,/, /g') || cves=
 notes=https://github.com/openssl/openssl/releases/tag/openssl-$latest
-add_to_changelog "- **macOS:** OpenSSL $latest, linked into Unbound${cves:+, with the fixes for $cves} ([its notes]($notes))."
+add_to_changelog "- **macOS and Android:** OpenSSL $latest, linked into Unbound${cves:+, with the fixes for $cves} ([its notes]($notes))."
 
 mkdir -p dist
 {
-	echo "OpenSSL released $latest; OffLok's macOS package links OpenSSL $pinned into its Unbound."
+	echo "OpenSSL released $latest; OffLok's macOS package and Android app link OpenSSL $pinned into their Unbound."
 	echo
 	echo "- **Signature:** good, by OpenSSL's key (\`$fpr\`)"
 	echo "- **SHA-256:** \`$sum\`, as OpenSSL published it"

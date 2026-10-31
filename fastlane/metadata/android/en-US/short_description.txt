@@ -1,0 +1,1 @@
+Your phone as its own DNS: every address looked up at the source, no middleman

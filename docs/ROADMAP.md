@@ -90,8 +90,10 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 
 ## 7. Android
 
-- [ ] The Go core on Android: an Android backend (the tunnel as the system DNS), Unbound as libunbound, the
-      tunnel's UDP queries answered by the front
+- [x] The Go core on Android: an Android backend (the tunnel as the system DNS), Unbound as libunbound, the
+      tunnel's UDP queries answered by the front; tested on Linux against Debian's libunbound
+- [ ] libunbound and OpenSSL built with the NDK for arm64, armv7 and x86_64; the core bound with gomobile, a full
+      library and Google Play's without the ad category
 - [ ] The app: a foreground `VpnService`, the computers' window in a WebView, a Quick Settings tile, the Private DNS
       warning
 - [ ] Emulator tests on GitHub's runners, then real phones

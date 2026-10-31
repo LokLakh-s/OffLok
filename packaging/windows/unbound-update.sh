@@ -56,11 +56,11 @@ cves=$(curl -fsSL https://nlnetlabs.nl/projects/unbound/security-advisories/ | s
 		match($0, /CVE-[0-9]+-[0-9]+/) { cve = substr($0, RSTART, RLENGTH) }
 		index($0, fix) && cve != "" { print cve; cve = "" }' | sort -u | paste -sd, - | sed 's/,/, /g') || cves=
 notes=https://github.com/NLnetLabs/unbound/releases/tag/release-$latest
-add_to_changelog "- **Windows and macOS:** Unbound $latest from NLnet Labs${cves:+, with the fixes for $cves} ([their notes]($notes))."
+add_to_changelog "- **Windows, macOS and Android:** Unbound $latest from NLnet Labs${cves:+, with the fixes for $cves} ([their notes]($notes))."
 
 mkdir -p dist
 {
-	echo "NLnet Labs released Unbound $latest; OffLok's Windows installer and macOS package ship Unbound $pinned."
+	echo "NLnet Labs released Unbound $latest; OffLok's Windows installer, macOS package and Android app ship Unbound $pinned."
 	echo
 	echo "- **Signatures:** good, by NLnet Labs' release key (\`$fpr\`), on the Windows build and on the source"
 	echo "- **SHA-256:** \`$sum\` (Windows), \`$src_sum\` (source), as NLnet Labs published them"

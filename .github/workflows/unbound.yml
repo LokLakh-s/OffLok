@@ -1,8 +1,8 @@
-# OffLok's Windows installer ships NLnet Labs' Unbound (packaging/windows/unbound.env), and its macOS package
-# Unbound built with OpenSSL (packaging/macos/sources.env), so OffLok must ship their security fixes itself. Every
-# day this looks for a newer Unbound (packaging/windows/unbound-update.sh) and a newer OpenSSL of the pinned series
-# (packaging/macos/openssl-update.sh); when one is out, signed, it opens a pull request that pins it, in a new
-# OffLok patch release, and runs the CI and the macOS workflow on it. Merging the pull request is the maintainer's
+# OffLok's Windows installer ships NLnet Labs' Unbound (packaging/windows/unbound.env), and its macOS package and
+# Android app Unbound built with OpenSSL (packaging/macos/sources.env), so OffLok must ship their security fixes
+# itself. Every day this looks for a newer Unbound (packaging/windows/unbound-update.sh) and a newer OpenSSL of the
+# pinned series (packaging/macos/openssl-update.sh); when one is out, signed, it opens a pull request that pins it, in
+# a new OffLok patch release, and runs the CI and the macOS and Android workflows on it. Merging the pull request is the maintainer's
 # approval: once the CI passes on main, the release's tag is made here and the release workflow runs on it.
 #
 # What the workflow's own token does starts no other workflow, except a dispatch: the CI and the release are
@@ -42,11 +42,11 @@ jobs:
         include:
           - dep: unbound
             name: Unbound
-            for: Windows and macOS
+            for: Windows, macOS and Android
             script: packaging/windows/unbound-update.sh
           - dep: openssl
             name: OpenSSL
-            for: macOS
+            for: macOS and Android
             script: packaging/macos/openssl-update.sh
     permissions:
       contents: write
@@ -88,8 +88,9 @@ jobs:
           git push -q origin "$branch"
           gh workflow run ci.yml --ref "$branch"
           gh workflow run macos.yml --ref "$branch"
+          gh workflow run android.yml --ref "$branch"
           runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions?query=branch%3A$branch"
-          printf '\nThe CI and the macOS workflow on this branch: %s\n' "$runs" >>"dist/$DEP-update.md"
+          printf '\nThe CI and the macOS and Android workflows on this branch: %s\n' "$runs" >>"dist/$DEP-update.md"
           title="OffLok $(cat VERSION): $NAME $NEW for $FOR"
           # Without "Allow GitHub Actions to create pull requests" (Settings, Actions, General), an issue says so,
           # with the link that opens it: the branch is there, and the next days' runs would stay silent.

@@ -326,31 +326,51 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
                                          root → TLD → the domain's servers; fallback: personal DoT, network DNS
 ```
 
-- **DNS only in the tunnel.** The tunnel's DNS server is one made-up address (`10.111.222.1`, and an `fd` address
-  when the network has IPv6), and that address is its only route: browsing and every other connection go on as
-  usual, neither slowed down nor seen by OffLok. OffLok leaves itself out of its tunnel.
-- **The Go core reads the tunnel.** It takes the UDP queries sent to that address, answers them through the front
-  (blocking, pause, trusted sites) and Unbound, and writes the answers back. The tunnel's MTU is large enough for
-  any UDP answer, so answers are never truncated. TCP to that address (Android's DNS over TCP, and its "Automatic"
-  Private DNS probing port 853) gets a reset at once, so that Android falls back to plain DNS without waiting.
+- **DNS only in the tunnel.** The tunnel's DNS servers are two made-up addresses, `10.111.222.1` and
+  `fd4f:666c:6f6b::1` (both always: the tunnel is local), and they are its only routes: browsing and every other
+  connection go on as usual, neither slowed down nor seen by OffLok.
+- **OffLok leaves itself out of its tunnel**, so that its default network is the phone's: Android's
+  `ConnectivityManager` tells the app that network's DNS servers, search domains and Private DNS hostname, and
+  every change, which the app hands to the core. OffLok's own lookups (the block lists' servers) ask its front on
+  the loopback, as a computer's go to OffLok.
+- **The Go core reads the tunnel** (`internal/tun`). It takes the UDP queries sent to OffLok's addresses, answers
+  them through the front (blocking, pause, trusted sites) and Unbound, and writes the answers back. An answer
+  Unbound truncates is asked again over TCP and goes back whole: the tunnel's MTU (65,535) fits any. TCP to those
+  addresses (Android's DNS over TCP, and its "Automatic" Private DNS probing port 853) gets a reset at once, so that
+  Android falls back to plain DNS without waiting.
 - **Unbound runs inside the app, as libunbound**, not as the `unbound` program: since Android 10 an app may not run
   programs from the folders it can write to, and since Android 12 the system may kill an app's child processes.
-  libunbound is the same resolver (the iterator and the validator) and reads the same configuration syntax; its
-  answers come back as DNS packets, which the front passes on. Unbound and OpenSSL are the macOS build's versions,
-  pinned and signature-checked the same way, built with the NDK.
-- **The same core as on computers.** `internal/daemon` gains an Android backend: the system DNS is the tunnel (on =
-  establish it, off = close it), and the network's DNS comes from Android's `ConnectivityManager` for the fallback,
-  captive portals and local names. Unbound becomes an engine behind one interface: the program on computers,
-  libunbound on Android. The core is built with `gomobile bind` into an `.aar` the Kotlin app calls.
-- **The app.** A foreground `VpnService`; its notification shows the state as the tray icon does. The window is
-  **the computers' window** (`desktop/frontend`) in a WebView: `api.js` talks to the Go core through a JavaScript
-  bridge instead of Wails, so one window serves every platform, in English and French. A Quick Settings tile turns
-  OffLok on and off. Android's "Always-on VPN" setting starts it at boot.
+  libunbound is the same resolver (the iterator and the validator) and reads OffLok's same configuration file.
+  `internal/libunbound` runs it in a thread of its own (`ub_ctx_async`) and answers on the loopback as the program
+  does, on the rules Unbound's server follows (read in its source, 1.26.2): a bogus answer is a SERVFAIL unless the
+  client set CD; AD only for a validated answer, to a client that asked with DO or AD; DNSSEC records only for a
+  client that asked with DO, or for their own type; over UDP, no larger than the client takes. A new configuration
+  restarts it (libunbound's log and some of its locks are the process's: two contexts may not overlap). SIGPIPE is
+  blocked in its thread, which writes to TCP sockets. Unbound and OpenSSL are the macOS build's versions, pinned
+  and signature-checked the same way, built with the NDK (`packaging/android/build-native.sh`): libunbound alone
+  (`--with-libunbound-only`), against an empty `expat.h`, since only `unbound-anchor` uses expat.
+- **DNS-over-TLS checks the personal resolver against Android's certificate authorities**: the core writes them
+  into one bundle at start (the Conscrypt module's since Android 14, the system's before; those a user added are
+  left out). libunbound starts only with a bundle it can read: without one, the personal resolver is unavailable.
+- **The same core as on computers** (`mobile/`). `internal/daemon` runs it with an Android backend: the system DNS
+  is the tunnel (on = the app establishes it and hands its descriptor over, off = the core closes it), and the
+  network's DNS comes from the app, for the fallback, captive portals and local names. Unbound is an engine behind
+  one interface (`unbound.Engine`): the program on computers, libunbound on Android. The front listens on
+  `127.0.0.1:10053` (an app may not take port 53) for the self-test and OffLok's own lookups, and libunbound on
+  `127.0.0.1:10530`. The core looks at the network every 30 seconds, and at once when the app tells of a change. It
+  is built with `gomobile bind` (pinned in `go.mod`) into an `.aar` the Kotlin app calls; the first start is off.
+- **The app** (`android/`, Kotlin, no AndroidX). A foreground `VpnService` (type `systemExempted`, which Android 14
+  allows a VPN app once the user let it start one); its notification shows the state as the tray icon does. The
+  window is **the computers' window** (`desktop/frontend`) in a WebView, served from a made-up HTTPS origin so that
+  its modules load: `api.js` talks to the Go core through a JavaScript bridge instead of Wails, so one window serves
+  every platform, in English and French; it leaves out what a phone has not (settings access, updates) and says
+  "phone". A Quick Settings tile turns OffLok on and off. Android's "Always-on VPN" setting starts it at boot.
 - **What only a phone needs.**
   - Android asks once for the VPN permission, the first time OffLok is turned on.
   - A Private DNS hostname set in Android's settings sends every query to that server, around any VPN: the window
     says so, with a button to the setting.
-  - Android runs one VPN at a time: turning another VPN app on turns OffLok off, and the window says why.
+  - Android runs one VPN at a time: turning another VPN app on turns OffLok off (it never takes the VPN back by
+    itself), and the window says why.
 - **Left out on Android:** settings access levels (one user), the command line, and the updater: Google Play and
   F-Droid update the app themselves, and the GitHub APK is updated with F-Droid, IzzyOnDroid or Obtainium.
 - **Requirements:** Android 9 or later (API 28, where the Private DNS state can be read), on arm64-v8a,
@@ -378,9 +398,12 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
     stay, unless Google's review refuses them. **F-Droid and GitHub ship the full app.** Two build flavours of the
     same code, `full` and `play`.
   - **offlok.org:** an Android card with the three sources.
-- **Tests:** the Go tests; then an Android emulator on GitHub's Linux runners: install, grant the VPN through
-  `appops`, resolve through the tunnel, DNSSEC, blocking, the root cut off, strict mode, off and the phone's DNS as
-  before. Then real phones.
+- **Tests:** the Go tests, the libunbound engine's and the whole core's among them, against Debian's libunbound
+  (the core's test plays the phone's resolver on a tunnel made of a socket pair); then an Android emulator on
+  GitHub's Linux runners (`test/android/test.sh`): install, grant the VPN through `appops`, resolve through the
+  tunnel, DNSSEC, blocking, off and the tunnel gone. To add: the root cut off, strict mode. Then real phones.
+- **Icons:** the adaptive icon is the Mac's tile, the mark at half of it; its monochrome layer and the
+  notification's icon are the mark's bright strokes (`scripts/brand-icons.py`).
 - **Limits, said in the app and on the site:** one VPN at a time; a Private DNS hostname bypasses OffLok; a resolver
   running all day costs some battery (to measure).
 
@@ -516,12 +539,15 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 - **macOS:** how VPN clients override DNS, and whether `/etc/resolver` covers their split domains.
 - **Captive portals:** the OS signals OffLok can read on each platform (NetworkManager connectivity state, Windows
   Network List Manager, macOS captive network detection).
-- **Android:** whether libunbound applies every option of OffLok's template (prefetch, serve-stale, aggressive
-  NSEC, `auto-trust-anchor-file`, forward zones with TLS) read through `ub_ctx_config`.
+- **Android:** whether libunbound applies every option of OffLok's template read through `ub_ctx_config`. Verified
+  (2026-11-01, Debian's libunbound 1.17.1): it reads the file, recurses, validates (AD, a broken signature refused)
+  and keeps the trust anchor up to date (its keytag query). Still to observe: prefetch, serve-stale, aggressive
+  NSEC, forward zones with TLS.
 - **Android:** whether Android's captive portal check uses the network's own DNS while OffLok's tunnel is up, and
   how Android's resolver behaves when TCP to the tunnel's address is reset.
-- **Android:** the foreground service type Android 14 and later require of a `VpnService`, and Google Play's
-  answer for a VPN that carries DNS only, to an on-phone resolver.
+- **Android:** the foreground service type: `systemExempted` on Android 14 and later, to check on phones (and
+  starting it from the background: the tile, a restart); Google Play's answer for a VPN that carries DNS only, to
+  an on-phone resolver.
 - **Android:** whether F-Droid's build server builds Go, OpenSSL and Unbound for the NDK, and byte for byte the
   same APK as ours.
 - **Android:** the battery a resolver running all day costs.

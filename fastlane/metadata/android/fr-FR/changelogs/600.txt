@@ -1,0 +1,1 @@
+Première version d'OffLok pour Android : ton téléphone, son propre DNS, par un VPN qui ne transporte que les requêtes DNS. Unbound 1.26.2 dans l'appli, DNSSEC vérifié sur le téléphone, le repli et le mode strict, le blocage (coupé au départ), une vignette dans les réglages rapides.
