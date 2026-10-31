@@ -52,7 +52,7 @@ jobs:
         run: ./packaging/macos/build-pkg.sh
 
       - name: The app's icon, as macOS shows it
-        run: swift test/macos/render-icon.swift bin/darwin/pkg/root/Applications/OffLok.app dist/icon-as-shown.png
+        run: swift test/macos/render-icon.swift "$PWD/bin/darwin/pkg/root/Applications/OffLok.app" dist/icon-as-shown.png
 
       - name: Keep the package a day (to try it on a Mac)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

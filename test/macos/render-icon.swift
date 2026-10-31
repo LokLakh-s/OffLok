@@ -1,7 +1,7 @@
 // Draws an app's icon as macOS shows it (NSWorkspace, through IconServices), 512 px, into a PNG: the macOS
 // workflow keeps it next to the package, to see whether macOS 26 takes OffLok's tile as it is or shuts it in a grey
 // square, as it does with icons that do not follow its shape.
-//   swift test/macos/render-icon.swift <app> <out.png>
+//   swift test/macos/render-icon.swift <app, its full path> <out.png>
 import AppKit
 
 let args = CommandLine.arguments
