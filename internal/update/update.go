@@ -187,8 +187,8 @@ func (s *Source) Download(ctx context.Context, r Release, name, dir string) (str
 }
 
 // fileVersion reads the version in the name of OffLok's packages and installer: offlok_0.5.0_amd64.deb,
-// offlok-desktop-0.5.0-1.x86_64.rpm, offlok-0.5.0-setup.exe.
-var fileVersion = regexp.MustCompile(`^offlok(?:-desktop)?[_-](\d+\.\d+\.\d+)[_-]`)
+// offlok-desktop-0.5.0-1.x86_64.rpm, offlok-0.5.0-setup.exe, offlok-0.5.0.pkg.
+var fileVersion = regexp.MustCompile(`^offlok(?:-desktop)?[_-](\d+\.\d+\.\d+)(?:[_-]|\.pkg$)`)
 
 // Parse checks sig over sums with keys and reads the release they describe.
 func Parse(sums, sig []byte, keys []ed25519.PublicKey) (Release, error) {

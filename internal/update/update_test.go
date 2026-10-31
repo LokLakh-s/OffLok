@@ -58,13 +58,19 @@ func TestParse(t *testing.T) {
 		"1111111111111111111111111111111111111111111111111111111111111111  offlok_0.5.0_amd64.deb\n" +
 		"2222222222222222222222222222222222222222222222222222222222222222 *offlok-desktop-0.5.0-1.x86_64.rpm\n" +
 		"3333333333333333333333333333333333333333333333333333333333333333  offlok-0.5.0-setup.exe\n" +
-		"4444444444444444444444444444444444444444444444444444444444444444  offlok-release-45e724ba.pub.pem\n")
+		"4444444444444444444444444444444444444444444444444444444444444444  offlok-release-45e724ba.pub.pem\n" +
+		"5555555555555555555555555555555555555555555555555555555555555555  offlok-0.5.0.pkg\n")
 	r, err := Parse(sums, ed25519.Sign(priv, sums), keys)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.Version != "0.5.0" || len(r.Assets) != 4 {
+	if r.Version != "0.5.0" || len(r.Assets) != 5 {
 		t.Fatalf("got %+v", r)
+	}
+	// The macOS package alone, as the update test serves it.
+	pkg := []byte("5555555555555555555555555555555555555555555555555555555555555555  offlok-0.5.0.pkg\n")
+	if r, err := Parse(pkg, ed25519.Sign(priv, pkg), keys); err != nil || r.Version != "0.5.0" {
+		t.Fatalf("the macOS package alone: %+v %v", r, err)
 	}
 	if a, ok := r.Asset("offlok-desktop-0.5.0-1.x86_64.rpm"); !ok || a.SHA256[0] != '2' {
 		t.Fatalf("the binary-mode line: %+v %v", a, ok)
@@ -86,9 +92,10 @@ func TestParse(t *testing.T) {
 	for name, bad := range map[string]string{
 		"two versions": "1111111111111111111111111111111111111111111111111111111111111111  offlok_0.5.0_amd64.deb\n" +
 			"2222222222222222222222222222222222222222222222222222222222222222  offlok_0.4.0_arm64.deb\n",
-		"no package": "1111111111111111111111111111111111111111111111111111111111111111  notes.txt\n",
-		"a path":     "1111111111111111111111111111111111111111111111111111111111111111  ../offlok_0.5.0_amd64.deb\n",
-		"a bad hash": "11  offlok_0.5.0_amd64.deb\n",
+		"no package":      "1111111111111111111111111111111111111111111111111111111111111111  notes.txt\n",
+		"a .pkg not ours": "1111111111111111111111111111111111111111111111111111111111111111  offlok-0.5.0.pkg.txt\n",
+		"a path":          "1111111111111111111111111111111111111111111111111111111111111111  ../offlok_0.5.0_amd64.deb\n",
+		"a bad hash":      "11  offlok_0.5.0_amd64.deb\n",
 	} {
 		b := []byte(bad)
 		if _, err := Parse(b, ed25519.Sign(priv, b), keys); err == nil || errors.Is(err, ErrSignature) {
