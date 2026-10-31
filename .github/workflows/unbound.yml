@@ -1,8 +1,9 @@
-# OffLok's Windows installer ships NLnet Labs' Unbound (packaging/windows/unbound.env), so OffLok must ship
-# Unbound's security fixes itself. Every day this looks for a newer Unbound for Windows; when NLnet Labs signed
-# one, it opens a pull request that pins it, in a new OffLok patch release (packaging/windows/unbound-update.sh), and
-# runs the CI on it. Merging the pull request is the maintainer's approval: once the CI passes on main, the
-# release's tag is made here and the release workflow runs on it.
+# OffLok's Windows installer ships NLnet Labs' Unbound (packaging/windows/unbound.env), and its macOS package
+# Unbound built with OpenSSL (packaging/macos/sources.env), so OffLok must ship their security fixes itself. Every
+# day this looks for a newer Unbound (packaging/windows/unbound-update.sh) and a newer OpenSSL of the pinned series
+# (packaging/macos/openssl-update.sh); when one is out, signed, it opens a pull request that pins it, in a new
+# OffLok patch release, and runs the CI and the macOS workflow on it. Merging the pull request is the maintainer's
+# approval: once the CI passes on main, the release's tag is made here and the release workflow runs on it.
 #
 # What the workflow's own token does starts no other workflow, except a dispatch: the CI and the release are
 # dispatched. GitHub turns a public repository's schedules off after 60 days without activity.
@@ -15,6 +16,9 @@ on:
     inputs:
       from:
         description: 'A test: as if this Unbound were pinned; nothing changes on GitHub'
+        required: false
+      openssl_from:
+        description: 'A test: as if this OpenSSL were pinned; nothing changes on GitHub'
         required: false
   workflow_run:
     workflows: [CI]
@@ -32,6 +36,18 @@ jobs:
     if: github.event_name != 'workflow_run'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dep: unbound
+            name: Unbound
+            for: Windows and macOS
+            script: packaging/windows/unbound-update.sh
+          - dep: openssl
+            name: OpenSSL
+            for: macOS
+            script: packaging/macos/openssl-update.sh
     permissions:
       contents: write
       pull-requests: write
@@ -40,22 +56,27 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: A newer Unbound, signed by NLnet Labs
+      - name: A newer ${{ matrix.name }}, signed
         id: update
         env:
-          FROM: ${{ inputs.from }}
+          FROM: ${{ matrix.dep == 'unbound' && inputs.from || inputs.openssl_from }}
+          GH_TOKEN: ${{ github.token }}
+          SCRIPT: ${{ matrix.script }}
         run: |
-          unbound=$(./packaging/windows/unbound-update.sh ${FROM:+--from "$FROM"})
-          echo "unbound=$unbound" >>"$GITHUB_OUTPUT"
+          version=$("./$SCRIPT" ${FROM:+--from "$FROM"})
+          echo "version=$version" >>"$GITHUB_OUTPUT"
           git diff
 
       - name: Its pull request, and the CI on it
-        if: steps.update.outputs.unbound != '' && !inputs.from
+        if: steps.update.outputs.version != '' && !inputs.from && !inputs.openssl_from
         env:
           GH_TOKEN: ${{ github.token }}
-          UNBOUND: ${{ steps.update.outputs.unbound }}
+          DEP: ${{ matrix.dep }}
+          NAME: ${{ matrix.name }}
+          FOR: ${{ matrix.for }}
+          NEW: ${{ steps.update.outputs.version }}
         run: |
-          branch=unbound-$UNBOUND
+          branch=$DEP-$NEW
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
             echo "$branch is there already"
             exit 0
@@ -63,27 +84,29 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -c "$branch"
-          git commit -qam "Unbound $UNBOUND for Windows"
+          git commit -qam "$NAME $NEW for $FOR"
           git push -q origin "$branch"
           gh workflow run ci.yml --ref "$branch"
-          runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/ci.yml?query=branch%3A$branch"
-          printf '\nThe CI on this branch: %s\n' "$runs" >>dist/unbound-update.md
-          title="OffLok $(cat VERSION): Unbound $UNBOUND for Windows"
+          gh workflow run macos.yml --ref "$branch"
+          runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions?query=branch%3A$branch"
+          printf '\nThe CI and the macOS workflow on this branch: %s\n' "$runs" >>"dist/$DEP-update.md"
+          title="OffLok $(cat VERSION): $NAME $NEW for $FOR"
           # Without "Allow GitHub Actions to create pull requests" (Settings, Actions, General), an issue says so,
           # with the link that opens it: the branch is there, and the next days' runs would stay silent.
           if ! url=$(gh pr create --base main --head "$branch" --title "$title" \
-            --body-file dist/unbound-update.md); then
+            --body-file "dist/$DEP-update.md"); then
             printf '\n**The pull request could not be opened**: %s\n' \
-              "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$branch?expand=1" >>dist/unbound-update.md
-            gh issue create --title "$title" --body-file dist/unbound-update.md
+              "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$branch?expand=1" >>"dist/$DEP-update.md"
+            gh issue create --title "$title" --body-file "dist/$DEP-update.md"
             exit 1
           fi
-          # An older Unbound's pull request, not merged, is superseded.
+          # An older pull request for the same dependency, not merged, is superseded.
           gh pr list --state open --json number,headRefName --jq \
-            ".[] | select((.headRefName | startswith(\"unbound-\")) and .headRefName != \"$branch\") | .number" |
+            ".[] | select((.headRefName | startswith(\"$DEP-\")) and .headRefName != \"$branch\") | .number" |
             while read -r n; do gh pr close "$n" --delete-branch --comment "Superseded by $url"; done
 
-  # After the CI on main: when the commit is a merged Unbound pull request that changed VERSION, its tag and release.
+  # After the CI on main: when the commit is a merged Unbound or OpenSSL pull request that changed VERSION, its tag
+  # and release.
   release:
     if: >-
       github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
@@ -107,10 +130,10 @@ jobs:
         run: |
           branch=$(gh pr list --state merged --base main --limit 30 --json headRefName,mergeCommit,isCrossRepository \
             --jq ".[] | select(.mergeCommit.oid == \"$SHA\" and (.isCrossRepository | not)) | .headRefName")
-          case "$branch" in unbound-*) ;; *) echo "Not an Unbound pull request: nothing to release"; exit 0 ;; esac
+          case "$branch" in unbound-* | openssl-*) ;; *) echo "Not a dependency's pull request: nothing to release"; exit 0 ;; esac
           version=$(cat VERSION)
           if [ "$version" = "$(git show HEAD^:VERSION)" ]; then
-            echo "VERSION did not change: OffLok $version ships Unbound with its own release"
+            echo "VERSION did not change: OffLok $version ships it with its own release"
             exit 0
           fi
           if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
