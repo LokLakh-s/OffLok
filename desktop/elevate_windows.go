@@ -11,6 +11,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// notRunningKey is the tray's tooltip when offlokd does not answer: how to start it here.
+const notRunningKey = "err.not-running.windows"
+
 // shellExecuteInfo is SHELLEXECUTEINFOW (x/sys/windows has ShellExecute, which gives no process to wait for).
 type shellExecuteInfo struct {
 	cbSize    uint32

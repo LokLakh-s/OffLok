@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/loklakh-s/offlok/internal/ipc"
 	"github.com/loklakh-s/offlok/internal/settings"
@@ -162,6 +163,10 @@ func install(stateDir string, args []string) error {
 		return err
 	}
 	_ = launchctl("bootout", "system/"+launchdLabel) // the previous version's, on an upgrade
+	// The previous offlokd gives the DNS back before it ends; launchd takes the job again only once it ended.
+	for i := 0; i < 30 && launchctl("print", "system/"+launchdLabel) == nil; i++ {
+		time.Sleep(time.Second)
+	}
 	_ = launchctl("enable", "system/"+launchdLabel)
 	if err := launchctl("bootstrap", "system", plistPath); err != nil {
 		return err
@@ -177,6 +182,7 @@ func uninstall(stateDir string) error {
 		return err
 	}
 	_ = launchctl("bootout", "system/"+launchdLabel)
+	_ = launchctl("bootout", "system/"+updateLabel) // the last update's job, ended; its file goes with stateDir
 	if err := os.Remove(plistPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}

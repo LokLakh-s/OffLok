@@ -120,7 +120,7 @@ func (a *App) call(req ipc.Request) Result {
 // trayState picks the tray's picture and tooltip for a status: the dot for fallback and error, grey when off.
 func trayState(lang string, st *daemon.Status) (string, string) {
 	if st == nil {
-		return "off", i18n.T(lang, "err.not-running")
+		return "off", i18n.T(lang, notRunningKey)
 	}
 	tip := i18n.T(lang, "state."+string(st.State))
 	switch st.State {

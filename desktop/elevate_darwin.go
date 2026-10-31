@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// notRunningKey is the tray's tooltip when offlokd does not answer: how to start it here.
+const notRunningKey = "err.not-running.macos"
+
 // errCancelled: the user closed macOS's password prompt.
 var errCancelled = errors.New("cancelled")
 

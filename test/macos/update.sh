@@ -65,6 +65,15 @@ check 'the menu bar app started again, from B' wait_until 60 app_restarted "$app
 check 'programs resolve through the system' bash -c 'dscacheutil -q host -a name nlnetlabs.nl | grep -q ip_address'
 echo "# $("$offlok" status | tr '\n' '|')"
 
+# What tells why, before the uninstall takes it away.
+if [ "$failed" -gt 0 ]; then
+	state="/Library/Application Support/OffLok"
+	echo "# offlokd's log:" && sudo tail -n 40 "$state/offlokd.log" "$state/offlokd.err" 2>/dev/null
+	echo "# the installer, during the update:" && sudo cat "$state/updates/installer.log" "$state/updates/installer.status" 2>/dev/null
+	echo "# launchd:" && sudo launchctl print system/org.loklakh.offlokd 2>&1 | grep -E 'state =|last exit|pid =' | head -5
+	echo "# the package's scripts:" && grep -E 'postinstall|offlok' /var/log/install.log | tail -n 25
+fi
+
 kill "$server"
 sudo "$libexec/uninstall.sh"
 check 'uninstall takes offlokd out of launchd' launchd_has_none
