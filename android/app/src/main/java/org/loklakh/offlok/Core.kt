@@ -13,7 +13,7 @@ object Core : Platform {
     private const val TAG = "OffLok"
     private lateinit var app: Context
 
-    /** The core's last status: what the notification and the Quick Settings tile show. */
+    /** The core's last status: what the Quick Settings tile shows. */
     @Volatile
     var status: JSONObject = JSONObject()
         private set
@@ -25,7 +25,6 @@ object Core : Platform {
     fun start(context: Context) {
         if (::app.isInitialized) return
         app = context.applicationContext
-        Notifications.createChannel(app)
         Mobile.start(app.filesDir.absolutePath, BuildConfig.VERSION_NAME, this)
         NetworkWatch.start(app)
         refresh()
@@ -46,7 +45,6 @@ object Core : Platform {
         val before = state
         status = st
         if (before != state) {
-            OffLokVpnService.showState(app)
             TileService.requestListeningState(app, ComponentName(app, QuickTile::class.java))
         }
     }
@@ -55,7 +53,7 @@ object Core : Platform {
 
     override fun openTunnel(): Long = OffLokVpnService.open(app)
 
-    override fun tunnelClosed() = OffLokVpnService.close()
+    override fun tunnelClosed() = OffLokVpnService.close(app)
 
     override fun changed(status: String) = update(JSONObject(status))
 

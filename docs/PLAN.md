@@ -359,9 +359,11 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   `127.0.0.1:10053` (an app may not take port 53) for the self-test and OffLok's own lookups, and libunbound on
   `127.0.0.1:10530`. The core looks at the network every 30 seconds, and at once when the app tells of a change. It
   is built with `gomobile bind` (pinned in `go.mod`) into an `.aar` the Kotlin app calls; the first start is off.
-- **The app** (`android/`, Kotlin, no AndroidX). A foreground `VpnService` (type `systemExempted`, which Android 14
-  allows a VPN app once the user let it start one); its notification shows the state as the tray icon does. The
-  window is **the computers' window** (`desktop/frontend`) in a WebView, served from a made-up HTTPS origin so that
+- **The app** (`android/`, Kotlin, no AndroidX). A `VpnService` with **no notification** (decided 2026-11-01: a
+  notification no one can swipe away is unwanted, and the status bar's icon, one colour, could not show the state
+  anyway): the app binds the service to open the tunnel, from the window, the tile or a restart alike, and once
+  the VPN is up Android binds it too and keeps the app running. Android's key icon shows the VPN; the window and
+  the tile show OffLok's state. The window is **the computers' window** (`desktop/frontend`) in a WebView, served from a made-up HTTPS origin so that
   its modules load: `api.js` talks to the Go core through a JavaScript bridge instead of Wails, so one window serves
   every platform, in English and French; it leaves out what a phone has not (settings access, updates) and says
   "phone". A Quick Settings tile turns OffLok on and off. Android's "Always-on VPN" setting starts it at boot.
@@ -406,8 +408,8 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   (the core's test plays the phone's resolver on a tunnel made of a socket pair); then an Android emulator on
   GitHub's Linux runners (`test/android/test.sh`): install, grant the VPN through `appops`, resolve through the
   tunnel, DNSSEC, blocking, off and the tunnel gone. To add: the root cut off, strict mode. Then real phones.
-- **Icons:** the adaptive icon is the Mac's tile, the mark at half of it; its monochrome layer and the
-  notification's icon are the mark's bright strokes (`scripts/brand-icons.py`).
+- **Icons:** the adaptive icon is the Mac's tile, the mark at half of it; its monochrome layer and the Quick
+  Settings tile's icon are the mark's bright strokes (`scripts/brand-icons.py`).
 - **Limits, said in the app and on the site:** one VPN at a time; a Private DNS hostname bypasses OffLok; a resolver
   running all day costs some battery (to measure).
 
@@ -551,9 +553,9 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
   NSEC, forward zones with TLS.
 - **Android:** whether Android's captive portal check uses the network's own DNS while OffLok's tunnel is up, and
   how Android's resolver behaves when TCP to the tunnel's address is reset.
-- **Android:** the foreground service type: `systemExempted` on Android 14 and later, to check on phones (and
-  starting it from the background: the tile, a restart); Google Play's answer for a VPN that carries DNS only, to
-  an on-phone resolver.
+- **Android:** that a VPN service with no notification stays up for days on phones that stop apps hard (OnePlus,
+  Xiaomi...), and starts from the tile and at boot; Google Play's answer for a VPN that carries DNS only, to an
+  on-phone resolver.
 - **Android:** whether F-Droid's build server builds Go, OpenSSL and Unbound for the NDK, and byte for byte the
   same APK as ours.
 - **Android:** the battery a resolver running all day costs.
