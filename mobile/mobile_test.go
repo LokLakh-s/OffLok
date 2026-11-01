@@ -5,6 +5,9 @@ package mobile
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"testing"
 	"time"
@@ -71,6 +74,30 @@ func TestCore(t *testing.T) {
 	}
 	if r := call(t, "check", "nlnetlabs.nl"); !r.OK {
 		t.Errorf("check: %+v", r)
+	}
+
+	// Blocking, with a list of one's own: the phone's lookup gets 0.0.0.0.
+	lists := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("||blocked-by-me.example^\n"))
+	}))
+	defer lists.Close()
+	for _, c := range [][2]string{{"block", "custom=on"}, {"list", "add " + lists.URL + "/mine.txt"}} {
+		if r := call(t, c[0], c[1]); !r.OK {
+			t.Fatalf("%s %s: %+v", c[0], c[1], r)
+		}
+	}
+	var got net.IP
+	for i := 0; i < 40; i++ {
+		if r := p.ask(t, "blocked-by-me.example."); len(r.Answer) == 1 {
+			if a, ok := r.Answer[0].(*dns.A); ok && a.A.Equal(net.IPv4zero) {
+				got = a.A
+				break
+			}
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	if got == nil {
+		t.Error("a name on the user's list is not blocked through the tunnel")
 	}
 	if r := call(t, "off", ""); !r.OK {
 		t.Fatalf("off: %+v", r)
