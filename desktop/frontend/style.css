@@ -23,6 +23,9 @@
   --grey: #8a9799;
   --grey-soft: #e7ecec;
   --switch-off: #c5d0d1;
+  --qs-bg: #0a7076;
+  --qs-ink: #ffffff;
+  --qs-icon-bg: rgb(255 255 255 / 16%);
   --shadow: 0 1px 2px rgb(20 32 34 / 6%), 0 4px 16px rgb(20 32 34 / 6%);
   color-scheme: light;
 }
@@ -44,6 +47,9 @@
     --grey: #7d8f91;
     --grey-soft: #1d2b2c;
     --switch-off: #2f4446;
+    --qs-bg: #2cc9b8;
+    --qs-ink: #0c1314;
+    --qs-icon-bg: rgb(12 19 20 / 14%);
     --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
     color-scheme: dark;
   }
@@ -65,6 +71,9 @@
   --grey: #7d8f91;
   --grey-soft: #1d2b2c;
   --switch-off: #2f4446;
+  --qs-bg: #2cc9b8;
+  --qs-ink: #0c1314;
+  --qs-icon-bg: rgb(12 19 20 / 14%);
   --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
   color-scheme: dark;
 }
@@ -152,6 +161,38 @@ main {
 }
 .warning p { margin: 0; }
 .warning-actions { display: flex; justify-content: flex-end; }
+
+/* Android: the Quick Settings tile, offered with a picture of it. */
+.tile-card { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; }
+.tile-body { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; }
+.tile-text { flex: 1 1 150px; min-width: 0; }
+.tile-card .tile-text h2 { margin: 0 0 2px; font-size: 15.5px; letter-spacing: 0; text-transform: none; color: var(--ink); text-wrap: balance; }
+.tile-text p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+.qs-tile {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 20px;
+  background: var(--qs-bg);
+  color: var(--qs-ink);
+  box-shadow: var(--shadow);
+}
+.qs-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--qs-icon-bg); }
+.qs-icon i {
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  -webkit-mask: url("img/tile-icon.png") center / contain no-repeat;
+  mask: url("img/tile-icon.png") center / contain no-repeat;
+}
+.qs-label { display: flex; flex-direction: column; line-height: 1.15; }
+.qs-label b { font-size: 14.5px; font-weight: 650; }
+.qs-label small { font-size: 12px; opacity: 0.85; }
+.tile-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.tile-steps li::marker { color: var(--teal-strong); font-weight: 650; }
+.tile-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .update-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* Strict mode and a captive portal: the one big button. */

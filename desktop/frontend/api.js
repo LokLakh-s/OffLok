@@ -101,6 +101,9 @@ export const api = preview
       check: async (site) => made_up_check(site),
       notes: async () => {},
       settings: () => {},
+      tile: () => params.get("tile") || "",
+      addTile: () => {},
+      dismissTile: () => {},
     }
   : {
       status: async () => (await call("Status")).status,
@@ -110,4 +113,8 @@ export const api = preview
         await call("OpenNotes");
       },
       settings: (which) => android?.openSettings(which),
+      // Android's Quick Settings tile: whether the window offers it, and how (QuickTile.prompt).
+      tile: () => android?.tile?.() || "",
+      addTile: () => android?.addTile(),
+      dismissTile: () => android?.dismissTile(),
     };

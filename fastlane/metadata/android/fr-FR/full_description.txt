@@ -8,7 +8,7 @@ OffLok fait de ton téléphone son propre DNS : l'annuaire qui transforme le nom
 • Moins de pisteurs, si tu veux : le blocage des pisteurs et des sites piégés est inclus, coupé au départ : un interrupteur par catégorie, tes propres listes, une pause de 10 minutes, et « Faire confiance » pour un site qui te manque.
 
 <b>Comment ça marche sur un téléphone</b>
-Android ne laisse une appli répondre au DNS du téléphone que par son service VPN. Le VPN d'OffLok ne transporte que les requêtes DNS : la navigation et toutes les autres connexions passent comme avant, sans être ralenties ni vues par OffLok. Le résolveur lui-même, c'est Unbound, de NLnet Labs, à l'intérieur de l'appli.
+Android ne laisse une appli répondre au DNS du téléphone que par son service VPN. Le VPN d'OffLok ne transporte que les requêtes DNS : la navigation et toutes les autres connexions passent comme avant, sans être ralenties ni vues par OffLok. Le résolveur lui-même, c'est Unbound, de NLnet Labs, à l'intérieur de l'appli. Une vignette dans les réglages rapides allume et éteint OffLok d'un toucher, sans ouvrir l'appli.
 Quand les serveurs racine sont injoignables (le Wi-Fi d'un hôtel), OffLok se replie sur le DNS du réseau et te le dit ; le mode strict ne le fait jamais, et « Se connecter à ce réseau » laisse s'ouvrir la page d'un portail captif.
 
 <b>Ce qu'OffLok ne fait pas</b>

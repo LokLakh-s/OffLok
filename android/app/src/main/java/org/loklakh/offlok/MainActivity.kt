@@ -1,7 +1,10 @@
 package org.loklakh.offlok
 
 import android.app.Activity
+import android.app.StatusBarManager
+import android.content.ComponentName
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -114,6 +117,37 @@ class MainActivity : Activity() {
             val action = if (which == "vpn") Settings.ACTION_VPN_SETTINGS else Settings.ACTION_WIRELESS_SETTINGS
             runOnUiThread { startActivity(Intent(action)) }
         }
+
+        /** Whether the window offers the Quick Settings tile, and how (QuickTile.prompt). */
+        @JavascriptInterface
+        fun tile(): String = QuickTile.prompt(this@MainActivity)
+
+        /** Android 13 or later asks the user whether to add the tile; the window then shows the answer. */
+        @JavascriptInterface
+        fun addTile() {
+            if (Build.VERSION.SDK_INT < 33) return
+            runOnUiThread {
+                getSystemService(StatusBarManager::class.java).requestAddTileService(
+                    ComponentName(this@MainActivity, QuickTile::class.java),
+                    getString(R.string.app_name),
+                    Icon.createWithResource(this@MainActivity, R.drawable.ic_tile),
+                    mainExecutor,
+                ) { result ->
+                    when (result) {
+                        StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED,
+                        StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED,
+                        -> QuickTile.mark(this@MainActivity, "added")
+                        StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_NOT_ADDED -> QuickTile.mark(this@MainActivity, "dismissed")
+                        else -> QuickTile.mark(this@MainActivity, "steps") // this Android cannot ask: the window says how
+                    }
+                    refreshWindow()
+                }
+            }
+        }
+
+        /** The user does not want the tile: the window stops offering it. */
+        @JavascriptInterface
+        fun dismissTile() = QuickTile.mark(this@MainActivity, "dismissed")
     }
 
     @Deprecated("Activity's own; OffLok uses no AndroidX")
@@ -135,9 +169,13 @@ class MainActivity : Activity() {
         runOnUiThread { web.evaluateJavascript("window.offlokAnswer($id, ${JSONObject.quote(result)})", null) }
     }
 
+    private fun refreshWindow() {
+        web.evaluateJavascript("window.offlokRefresh && window.offlokRefresh()", null)
+    }
+
     override fun onResume() {
         super.onResume()
-        web.evaluateJavascript("window.offlokRefresh && window.offlokRefresh()", null)
+        refreshWindow()
     }
 
     override fun onDestroy() {

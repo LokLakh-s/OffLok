@@ -2,8 +2,8 @@
 fallback and error: an orange or red dot at the bottom right; off: the mark in grey, chosen on 29/10/2026), the app
 icon in the desktop's sizes (the mark alone on transparency, 94 % of the square), the Mac's icon on a tile (the
 Dock expects one, and macOS 26 shuts a round icon in a grey square: very dark teal, the mark at 72 %, chosen on
-31/10/2026), Android's adaptive icon on the same tile and its Quick Settings tile's icon, the window's mark, and the
-website's images.
+31/10/2026), Android's adaptive icon on the same tile and its Quick Settings tile's icon, the window's mark and its picture of
+that tile, and the website's images.
 Run from the repository: python3 scripts/brand-icons.py"""
 import os
 
@@ -156,4 +156,6 @@ if __name__ == "__main__":
     for name, img in {"on": tray, "fallback": badge(tray, ORANGE), "error": badge(tray, RED), "off": grey(tray)}.items():
         img.resize((96, 96), Image.LANCZOS).save(f"site/img/state-{name}.png", optimize=True)
     android_icons(mark, bold, "android/app/src/main/res", "fastlane/metadata/android/en-US/images/icon.png")
-    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png, packaging/windows/offlok.ico, packaging/macos/offlok.iconset/, site/, android/app/src/main/res/, fastlane/metadata/android/en-US/images/icon.png")
+    # The window's picture of that tile (Android), 20 px on screens of up to 3.5 pixels per point.
+    padded(silhouette(bold), 72, 0.92).save("desktop/frontend/img/tile-icon.png", optimize=True)
+    print("desktop/icons/tray-*.png, packaging/linux/icons/offlok-*.png, desktop/frontend/img/offlok-mark.png and tile-icon.png, packaging/windows/offlok.ico, packaging/macos/offlok.iconset/, site/, android/app/src/main/res/, fastlane/metadata/android/en-US/images/icon.png")

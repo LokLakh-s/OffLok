@@ -53,6 +53,15 @@ function render(st) {
   $(".warning").hidden = !warning;
   if (warning) $(".warning p").textContent = t(`warning.${warning}`);
 
+  // Android: the Quick Settings tile, offered once OffLok is on, until it is added or the user says no. Android 13
+  // or later asks the user itself; before, the window says how.
+  const tile = st.platform === "android" && !["off", "starting"].includes(state) ? api.tile() : "";
+  $(".tile-card").hidden = tile !== "ask" && tile !== "steps";
+  $(".tile-steps").hidden = tile !== "steps";
+  $("[data-action=tile-add]").hidden = tile !== "ask";
+  $("[data-action=tile-later]").hidden = tile !== "ask";
+  $("[data-action=tile-ok]").hidden = tile !== "steps";
+
   const signin = $(".signin");
   signin.hidden = state !== "strict-blocked" && !st.signin_until;
   $("[data-action=signin]").textContent = t("signin.button");
@@ -240,7 +249,14 @@ refresh();
 $("[data-action=settings]").addEventListener("click", () =>
   api.settings(lastStatus.warning === "android-other-vpn" ? "vpn" : "network"),
 );
-globalThis.offlokRefresh = refresh; // Android's app, back in front
+$("[data-action=tile-add]").addEventListener("click", () => api.addTile());
+for (const b of document.querySelectorAll("[data-action=tile-later], [data-action=tile-ok]")) {
+  b.addEventListener("click", () => {
+    api.dismissTile();
+    refresh();
+  });
+}
+globalThis.offlokRefresh = refresh; // Android's app, back in front, or Android's answer about the tile
 setInterval(refresh, 3000);
 // ?check=<site> runs "Is this site blocked?" at once (screenshots).
 const preset = new URLSearchParams(location.search).get("check");

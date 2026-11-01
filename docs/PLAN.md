@@ -366,7 +366,10 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   the tile show OffLok's state. The window is **the computers' window** (`desktop/frontend`) in a WebView, served from a made-up HTTPS origin so that
   its modules load: `api.js` talks to the Go core through a JavaScript bridge instead of Wails, so one window serves
   every platform, in English and French; it leaves out what a phone has not (settings access, updates) and says
-  "phone". A Quick Settings tile turns OffLok on and off. Android's "Always-on VPN" setting starts it at boot.
+  "phone". A Quick Settings tile turns OffLok on and off. Few people look for an app's tile: once OffLok
+  is on, the window offers it until it is added or the user says no. Android 13 or later
+  asks the user itself (`requestAddTileService`); before, the window gives the three gestures. The app knows the
+  tile is there when Android adds it or listens to it. Android's "Always-on VPN" setting starts it at boot.
 - **What only a phone needs.**
   - Android asks once for the VPN permission, the first time OffLok is turned on.
   - A Private DNS hostname set in Android's settings sends every query to that server, around any VPN: the window
