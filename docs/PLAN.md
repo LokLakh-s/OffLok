@@ -478,8 +478,10 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   - Test builds (`-tags offlok_testkey`, never released) also trust `test/release/`'s key, which is public, and
     read their releases from `$OFFLOK_UPDATE_BASE`: the update tests (`test/integration/update.sh`,
     `test/windows/update.ps1`) serve made-up releases. Released builds do neither.
-- **Releases** (`.github/workflows/release.yml`): a tag `v<VERSION>` builds the packages and the installer on
-  GitHub's machines, tests the installer on Windows, then publishes them with `SHA256SUMS`, its signature, the
+- **Releases** (`.github/workflows/release.yml`): a tag `v<VERSION>` checks that the CI passed on its commit, or on
+  an earlier one with nothing since that the CI tests (`packaging/release/untouched.py` reads its `paths`), builds
+  the packages and the installer on GitHub's machines, tests them on Windows, macOS and an Android emulator, then
+  publishes them with `SHA256SUMS`, its signature, the
   public key and, once the repository is public, a build provenance attestation. The notes are the version's
   section of `CHANGELOG.md` (`packaging/release/notes.sh`). Run by hand on a branch, the workflow is a rehearsal
   that publishes nothing.

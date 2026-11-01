@@ -33,20 +33,30 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the CI's check below compares this commit with earlier ones
 
       - name: The tag is the version
         if: github.ref_type == 'tag'
         run: test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
 
-      # The integration tests need containers with systemd: the CI ran them on this very commit.
+      # The integration tests need containers with systemd: the CI ran them on this commit, or on an earlier one with
+      # nothing since that the CI tests (a push that changes none of its paths starts no CI).
       - name: The CI passed on this commit
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          passed=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --status success \
-            --json databaseId --jq length)
-          test "$passed" -gt 0
+          for sha in $(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --status success --limit 50 \
+            --json headSha --jq '.[].headSha' | awk '!seen[$0]++'); do
+            if git merge-base --is-ancestor "$sha" "$GITHUB_SHA" 2>/dev/null &&
+              python3 -I packaging/release/untouched.py .github/workflows/ci.yml "$sha" "$GITHUB_SHA"; then
+              echo "The CI passed on $sha"
+              exit 0
+            fi
+          done
+          echo "::error::The CI has not passed on this commit, nor on an earlier one with nothing since that it tests"
+          exit 1
 
       # Go's caches are shared by both images through the runner's temporary folder.
       - name: Tests and Linux packages
