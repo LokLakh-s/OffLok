@@ -92,11 +92,12 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 
 - [x] The Go core on Android: an Android backend (the tunnel as the system DNS), Unbound as libunbound, the
       tunnel's UDP queries answered by the front; tested on Linux against Debian's libunbound
-- [ ] libunbound and OpenSSL built with the NDK for arm64, armv7 and x86_64; the core bound with gomobile, a full
+- [x] libunbound and OpenSSL built with the NDK for arm64, armv7 and x86_64; the core bound with gomobile, a full
       library and Google Play's without the ad category
-- [ ] The app: a foreground `VpnService`, the computers' window in a WebView, a Quick Settings tile, the Private DNS
-      warning
-- [ ] Emulator tests on GitHub's runners, then real phones
+- [x] The app: a foreground `VpnService`, the computers' window in a WebView, a Quick Settings tile, the Private DNS
+      and other-VPN warnings; built in the full and Google Play flavours (the latter checked to carry no ad list)
+- [x] Emulator tests on GitHub's runners (Android 14): the VPN, resolution through it, DNSSEC, blocking, off
+- [ ] Emulator tests of the root cut off and strict mode; real phones; the battery a day costs
 - [ ] One release key; the APK on GitHub Releases; F-Droid (reproducible build) and IzzyOnDroid; Google Play
 
 ## 8. Later
