@@ -381,6 +381,10 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   when its own build matches it byte for byte (a reproducible build: `Binaries` and `AllowedAPKSigningKeys` in its
   metadata). The key is also given to Play App Signing ("provide a copy of your app signing key"), so the app
   updates from any of the three sources. The key lives in a GitHub secret, with a copy the maintainer keeps offline.
+  Created on 2026-11-01 (alias `offlok`, valid 100 years); its certificate's SHA-256 is pinned in
+  `packaging/android/android.env`, and the release workflow checks the signed APK against it. Releases sign the APK
+  with `apksigner` (scheme v3, Android 9 and later) and Google Play's bundle with `jarsigner`, kept as an artifact
+  for the Play Console.
 - **Google's developer verification** (certified devices, France in 2027): the maintainer's Play Console account
   registers `org.loklakh.offlok` and the release key, which covers the APK of GitHub and F-Droid too. Users then
   install it as today, without the "advanced flow".
