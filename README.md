@@ -6,7 +6,8 @@ Google, Cloudflare or Quad9 in between. Free software under the MIT licence.
 
 > **Status: early.** Linux (tested on Ubuntu 24.04, with systemd-resolved and without it), Windows 10 (version
 > 2004 or later) and 11, and macOS 13 or later (Apple silicon and Intel) work, each with an icon in the tray or the
-> menu bar and a window. Android follows, on Google Play and F-Droid, then iOS. See [docs/PLAN.md](docs/PLAN.md),
+> menu bar and a window; Android 9 or later too, through a VPN that carries DNS queries only. F-Droid and Google
+> Play follow, then iOS. See [docs/PLAN.md](docs/PLAN.md),
 > [docs/ROADMAP.md](docs/ROADMAP.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## What it changes, honestly
@@ -35,8 +36,8 @@ back, and stopping or uninstalling restores the system exactly as it was. Unboun
 ## Download
 
 From [the releases](https://github.com/LokLakh-s/OffLok/releases): `offlok-<version>-setup.exe` for Windows,
-`offlok-<version>.pkg` for macOS, the `.deb` or `.rpm` packages for Linux (`offlok`, and `offlok-desktop` for the
-tray icon and window).
+`offlok-<version>.pkg` for macOS, `offlok-<version>.apk` for Android, the `.deb` or `.rpm` packages for Linux
+(`offlok`, and `offlok-desktop` for the tray icon and window).
 
 Every release has a `SHA256SUMS` file, signed with OffLok's release key
 ([`offlok-release-45e724ba.pub.pem`](packaging/release/offlok-release-45e724ba.pub.pem), Ed25519). To check a
@@ -92,7 +93,11 @@ service its original DNS back:
 sudo /usr/local/libexec/offlok/uninstall.sh
 ```
 
-Once a day, OffLok looks for a new release; the window then offers it, and `offlok update` installs it. An update
+On Android, `offlok-<version>.apk` holds OffLok's core and Unbound (as libunbound, with OpenSSL 3.5): when it is
+on, a VPN carries the phone's DNS queries to it, and nothing else. Android asks once for the permission. Its
+signing certificate's SHA-256 is `795fecc414ed164c45d85142a541d4dc58ca4fe411f22b5d610730dab7cd3212`.
+
+On computers, once a day, OffLok looks for a new release; the window then offers it, and `offlok update` installs it. An update
 is installed only if `SHA256SUMS` carries the release key's signature and every file matches it.
 
 ## Build and test
@@ -108,11 +113,13 @@ test/integration/run.sh desktop   # the desktop packages on a virtual screen, sc
 packaging/windows/build.sh        # the Windows installer, dist/offlok-<version>-setup.exe (built on Linux too)
 packaging/macos/build-unbound.sh  # on a Mac: Unbound with OpenSSL linked in, one program for both processors
 packaging/macos/build-pkg.sh      # on a Mac, after it: dist/offlok-<version>.pkg
+packaging/android/build-native.sh # libunbound and OpenSSL for Android, with the NDK (packaging/android/android.env)
+packaging/android/build-core.sh   # after it: the Go core as Android libraries (gomobile), then android/'s Gradle
 site/build.sh                     # the website, offlok.org, in bin/site/ (French, and English under en/)
 ```
 
-`test/windows/test.ps1` checks the Windows installer on a disposable Windows machine, and `test/macos/test.sh` the
-macOS package on a disposable Mac (the CI uses GitHub's).
+`test/windows/test.ps1` checks the Windows installer on a disposable Windows machine, `test/macos/test.sh` the
+macOS package on a disposable Mac, and `test/android/test.sh` the app on an Android emulator (the CI uses GitHub's).
 
 The integration tests change nothing on the machine running them: each container has its own network
 namespace, resolver and firewall.
