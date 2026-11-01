@@ -435,8 +435,8 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
     (`packaging/macos/openssl-update.sh`);
   - `packaging/windows/unbound-update.sh` pins it, adds a patch release to `CHANGELOG.md` with the CVEs NLnet Labs'
     advisories say it fixes (or adds it to the version in progress, when VERSION is not released yet), and the
-    job opens a pull request and runs the whole CI and the macOS workflow on its branch; a newer one closes an older
-    one's request.
+    job opens a pull request and runs on its branch the workflows of the platforms it changes (Unbound: all of them;
+    OpenSSL: macOS's and Android's); a newer one closes an older one's request.
     The repository must let GitHub Actions open pull requests (Settings, Actions, General); when it cannot, an
     issue says so, with the link that opens it;
   - merging it is the approval: once the CI passes on main, the job makes the tag and runs the release workflow
@@ -514,9 +514,11 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 - **Identity:** commits are the maintainer's GitHub account, `Klakh <6003117+Klakh@users.noreply.github.com>`, signed
   with an SSH key (decided 2026-11-01: a project people run with administrator rights shows who maintains it).
   Those before, `LokLakh <contact@loklakh.fr>`, link to the same account once that address is verified on it.
-- **CI:** GitHub-hosted runners on Linux, Windows and macOS. They run the unit tests, the integration
-  tests in containers, and an install → resolve → update → uninstall → original-settings-restored test on each
-  platform.
+- **CI:** GitHub-hosted runners on Linux, Windows and macOS, and an Android emulator. They run the unit tests, the
+  integration tests in containers, and an install → resolve → update → uninstall → original-settings-restored test
+  on each platform. A push to main starts only the workflows of the platforms it changes (each workflow's `paths`):
+  the Go core, the window and VERSION start all of them; documentation, the website, the store texts and the release
+  scripts none; the release tests everything again.
 
 ## Milestones
 

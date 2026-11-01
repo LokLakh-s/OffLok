@@ -9,7 +9,30 @@ name: Android
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'docs/**', 'site/**', '.github/workflows/site.yml']
+    # Only what the app is made of: the Go core (internal/, mobile/), the window (desktop/frontend/), the native
+    # sources' pins, the Android project. The last pattern a file matches decides.
+    paths:
+      - '**'
+      - '!**.md'
+      - '!docs/**'
+      - '!site/**'
+      - '!.github/**'
+      - '.github/workflows/android.yml'
+      - '!cmd/**'
+      - '!desktop/**'
+      - 'desktop/frontend/**'
+      - '!packaging/**'
+      - 'packaging/android/**'
+      - 'packaging/macos/sources.env'
+      - '!test/**'
+      - 'test/android/**'
+      - '!fastlane/**'
+      - '!**_windows.go'
+      - '!**_darwin.go'
+      - '!scripts/**'
+      - '!assets/**'
+      - '!LICENSE'
+      - '!.gitignore'
   workflow_dispatch:
 
 concurrency:
@@ -40,6 +63,8 @@ jobs:
       - name: The engine and the core, with Debian's libunbound
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq libunbound-dev >/dev/null
+          unformatted="$(gofmt -l internal/libunbound internal/tun mobile)"
+          [ -z "$unformatted" ] || { echo "::error::gofmt: $unformatted"; exit 1; }
           go vet -tags libunbound ./internal/libunbound/ ./mobile/
           go test -count=1 -race -tags libunbound ./internal/libunbound/ ./internal/tun/ ./mobile/
           go test -count=1 -tags noads ./internal/blocklist/ ./internal/daemon/

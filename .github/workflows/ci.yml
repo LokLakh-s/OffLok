@@ -1,10 +1,11 @@
-# OffLok: at each push to main, and by hand (the Unbound workflow, on its pull requests' branches), formatting,
-# vet, the tests with the race detector, a build of the portable packages for macOS, the Linux packages (offlok,
-# then offlok-desktop in an image with GTK 3 and WebKitGTK) and the Windows installer, the update tests' two test
-# releases (test/update-builds.sh), then the integration tests in disposable containers (test/integration/run.sh):
-# the main scenario on the binaries, the .deb's install and removal scripts, the desktop packages on a virtual
-# screen, and an update from one test release to the next. Then, on one of GitHub's Windows machines, the tests on
-# Windows, the installer's test (test/windows/test.ps1) and the update's (test/windows/update.ps1).
+# OffLok: at each push to main that changes what Linux or Windows is made of, and by hand (the Unbound workflow, on
+# its pull requests' branches), formatting, vet, the tests with the race detector, a build of the portable packages
+# for macOS, the Linux packages (offlok, then offlok-desktop in an image with GTK 3 and WebKitGTK) and the Windows
+# installer, the update tests' two test releases (test/update-builds.sh), then the integration tests in disposable
+# containers (test/integration/run.sh): the main scenario on the binaries, the .deb's install and removal scripts, the
+# desktop packages on a virtual screen, and an update from one test release to the next. Then, on one of GitHub's
+# Windows machines, the tests on Windows, the installer's test (test/windows/test.ps1) and the update's
+# (test/windows/update.ps1).
 #
 # On GitHub's machines: the integration tests need Docker. They change nothing on the host (each container has its
 # own network namespace). Nothing is deployed; the Windows installers are kept a day as an artifact, for the
@@ -14,7 +15,29 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'docs/**', 'site/**', '.github/workflows/site.yml']
+    # Not what only Android or macOS is made of. The last pattern a file matches decides.
+    paths:
+      - '**'
+      - '!**.md'
+      - '!docs/**'
+      - '!site/**'
+      - '!.github/**'
+      - '.github/workflows/ci.yml'
+      - '!android/**'
+      - '!mobile/**'
+      - '!internal/libunbound/**'
+      - '!internal/tun/**'
+      - '!fastlane/**'
+      - '!packaging/android/**'
+      - '!packaging/macos/**'
+      - '!packaging/release/**'
+      - '!test/android/**'
+      - '!test/macos/**'
+      - '!**_darwin.go'
+      - '!scripts/**'
+      - '!assets/**'
+      - '!LICENSE'
+      - '!.gitignore'
   workflow_dispatch:
 
 concurrency:

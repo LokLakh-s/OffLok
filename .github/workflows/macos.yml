@@ -9,7 +9,31 @@ name: macOS
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'docs/**', 'site/**', '.github/workflows/site.yml']
+    # Not what only Android, Linux or Windows is made of. The last pattern a file matches decides.
+    paths:
+      - '**'
+      - '!**.md'
+      - '!docs/**'
+      - '!site/**'
+      - '!.github/**'
+      - '.github/workflows/macos.yml'
+      - '!android/**'
+      - '!mobile/**'
+      - '!internal/libunbound/**'
+      - '!internal/tun/**'
+      - '!fastlane/**'
+      - '!packaging/**'
+      - 'packaging/macos/**'
+      - '!test/**'
+      - 'test/macos/**'
+      - 'test/release/**'
+      - 'test/update-builds.sh'
+      - '!**_windows.go'
+      - '!**_linux.go'
+      - '!scripts/**'
+      - '!assets/**'
+      - '!LICENSE'
+      - '!.gitignore'
   workflow_dispatch:
 
 concurrency:

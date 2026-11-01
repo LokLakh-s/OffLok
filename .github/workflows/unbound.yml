@@ -2,7 +2,7 @@
 # Android app Unbound built with OpenSSL (packaging/macos/sources.env), so OffLok must ship their security fixes
 # itself. Every day this looks for a newer Unbound (packaging/windows/unbound-update.sh) and a newer OpenSSL of the
 # pinned series (packaging/macos/openssl-update.sh); when one is out, signed, it opens a pull request that pins it, in
-# a new OffLok patch release, and runs the CI and the macOS and Android workflows on it. Merging the pull request is the maintainer's
+# a new OffLok patch release, and runs on it the workflows of the platforms it changes. Merging the pull request is the maintainer's
 # approval: once the CI passes on main, the release's tag is made here and the release workflow runs on it.
 #
 # What the workflow's own token does starts no other workflow, except a dispatch: the CI and the release are
@@ -86,11 +86,16 @@ jobs:
           git switch -c "$branch"
           git commit -qam "$NAME $NEW for $FOR"
           git push -q origin "$branch"
-          gh workflow run ci.yml --ref "$branch"
+          # OpenSSL is only in macOS's package and Android's app: Linux and Windows have nothing new to test.
+          workflows="the macOS and Android workflows"
+          if [ "$DEP" != openssl ]; then
+            gh workflow run ci.yml --ref "$branch"
+            workflows="the CI and $workflows"
+          fi
           gh workflow run macos.yml --ref "$branch"
           gh workflow run android.yml --ref "$branch"
           runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions?query=branch%3A$branch"
-          printf '\nThe CI and the macOS and Android workflows on this branch: %s\n' "$runs" >>"dist/$DEP-update.md"
+          printf '\n%s on this branch: %s\n' "${workflows^}" "$runs" >>"dist/$DEP-update.md"
           title="OffLok $(cat VERSION): $NAME $NEW for $FOR"
           # Without "Allow GitHub Actions to create pull requests" (Settings, Actions, General), an issue says so,
           # with the link that opens it: the branch is there, and the next days' runs would stay silent.
