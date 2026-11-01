@@ -85,7 +85,8 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
       universal `.pkg`, tested on GitHub's macOS 26 runners (install, DNS, DNSSEC, blocking, a crash, fallback,
       strict mode, update, uninstall)
 - [x] The `.pkg` in the releases and in `SHA256SUMS`; the daily watch covers Unbound's source and OpenSSL
-- [ ] A real Mac: Wi-Fi, VPNs (their split DNS is left to macOS), captive portals
+- [x] A real Mac (Apple silicon, 2026-11-01): the package installs, OffLok resolves, the menu bar app and its window
+- [ ] On a real Mac still: VPNs (their split DNS is left to macOS), captive portals
 - [ ] Homebrew tap
 
 ## 7. Android
