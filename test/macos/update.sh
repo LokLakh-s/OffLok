@@ -71,6 +71,8 @@ if [ "$failed" -gt 0 ]; then
 	echo "# offlokd's log:" && sudo tail -n 40 "$state/offlokd.log" "$state/offlokd.err" 2>/dev/null
 	echo "# the installer, during the update:" && sudo cat "$state/updates/installer.log" "$state/updates/installer.status" 2>/dev/null
 	echo "# launchd:" && sudo launchctl print system/org.loklakh.offlokd 2>&1 | grep -E 'state =|last exit|pid =' | head -5
+	echo "# the menu bar app (it was $app):" && pgrep -lx offlok-desktop
+	launchctl print "gui/$(id -u)/org.loklakh.offlok.desktop" 2>&1 | grep -E 'state =|last exit|pid =' | head -5
 	echo "# the package's scripts:" && grep -E 'postinstall|offlok' /var/log/install.log | tail -n 25
 fi
 

@@ -10,6 +10,14 @@ case "$user" in
 esac
 uid=$(id -u "$user")
 launchctl bootout "gui/$uid/org.loklakh.offlok.desktop" 2>/dev/null
+pkill -u "$uid" -x offlok-desktop # one opened outside launchd
+# The old app takes a moment to quit: a new one started before would find it running, hand over to it and quit.
+i=0
+while [ $i -lt 30 ] && { launchctl print "gui/$uid/org.loklakh.offlok.desktop" >/dev/null 2>&1 ||
+	pgrep -u "$uid" -x offlok-desktop >/dev/null; }; do
+	sleep 1
+	i=$((i + 1))
+done
 launchctl bootstrap "gui/$uid" /Library/LaunchAgents/org.loklakh.offlok.desktop.plist 2>/dev/null
 if [ "$first" = yes ]; then
 	# A second launch shows the running one's window.
