@@ -8,10 +8,15 @@ What changes from one OffLok release to the next. Each release's notes on GitHub
   1.26.2 built with OpenSSL 3.5.9, OffLok in the menu bar with its window, and the `offlok` command. Every network
   service points at OffLok; `sudo /usr/local/libexec/offlok/uninstall.sh` gives each its original DNS back. The
   package is not signed yet: macOS asks to allow it once, in System Settings › Privacy & Security.
+- **Android**, 9 or later: `offlok-0.6.0.apk` makes the phone its own DNS, through a VPN that carries DNS queries
+  only. Unbound 1.26.2 and OpenSSL 3.5.9 run inside the app; DNSSEC is checked on the phone; the fallback, strict
+  mode and blocking work as on computers, in the computers' window, with a Quick Settings tile. The app says when
+  Android's Private DNS setting or another VPN app gets around it. F-Droid and Google Play come next.
 - **Updates on macOS**, as on Windows: OffLok installs a new release's package itself, once its signature checks.
-- **Unbound's and OpenSSL's security fixes reach the Mac** as Unbound's reach Windows: a daily watch checks their
-  signatures and proposes a new OffLok release.
-- **offlok.org:** the Mac's download and how to open it, and a "Donate" button (Liberapay).
+- **Unbound's and OpenSSL's security fixes reach the Mac and Android** as Unbound's reach Windows: a daily watch
+  checks their signatures and proposes a new OffLok release.
+- **offlok.org:** the Mac's download and how to open it, a "Donate" button (Liberapay), and a picture when a link to
+  it is shared.
 
 ## 0.5.1
 
