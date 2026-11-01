@@ -15,8 +15,8 @@ What changes from one OffLok release to the next. Each release's notes on GitHub
 - **Updates on macOS**, as on Windows: OffLok installs a new release's package itself, once its signature checks.
 - **Unbound's and OpenSSL's security fixes reach the Mac and Android** as Unbound's reach Windows: a daily watch
   checks their signatures and proposes a new OffLok release.
-- **offlok.org:** the Mac's download and how to open it, a "Donate" button (Liberapay), and a picture when a link to
-  it is shared.
+- **offlok.org:** the Mac's and Android's downloads, how to open the Mac's package, a "Donate" button (Liberapay),
+  and a picture when a link to it is shared.
 
 ## 0.5.1
 

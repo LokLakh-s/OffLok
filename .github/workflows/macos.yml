@@ -8,7 +8,7 @@ name: macOS
 
 on:
   push:
-    branches: [main, macos] # macos: while the port is written; dropped when it is merged
+    branches: [main]
     paths-ignore: ['**.md', 'docs/**', 'site/**', '.github/workflows/site.yml']
   workflow_dispatch:
 
