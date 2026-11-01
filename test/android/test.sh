@@ -51,7 +51,8 @@ state_is() { core status | grep -Eq "\"state\":\"($1)\""; }
 lookup() { adb shell ping -c 1 -W 1 "$1" 2>&1 | sed -n 's/^PING [^ ]* (\([^)]*\)).*/\1/p'; }
 resolves() { [ -n "$(lookup "$1")" ]; }
 refused() { [ -z "$(lookup "$1")" ]; }
-blocked() { [ "$(lookup "$1")" = 0.0.0.0 ]; }
+# OffLok answers 0.0.0.0 for a blocked name; ping takes that address for the phone itself and shows 127.0.0.1.
+blocked() { case $(lookup "$1") in 0.0.0.0 | 127.0.0.1) true ;; *) false ;; esac; }
 tunnel() { adb shell ip -brief addr show tun0 2>/dev/null | grep -q '10\.111\.222\.2/32'; }
 no_tunnel() { ! tunnel; }
 
