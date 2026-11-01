@@ -22,21 +22,27 @@ check() {
 	fi
 }
 
+# wait_until <seconds> <command...>: a deadline, however long each try takes.
 wait_until() {
-	local seconds=$1
+	local deadline=$((SECONDS + $1))
 	shift
-	for _ in $(seq "$seconds"); do
+	while :; do
 		"$@" && return 0
+		[ "$SECONDS" -lt "$deadline" ] || return 1
 		sleep 1
 	done
-	return 1
 }
 
-# One of the core's commands; its result is the last OffLokTest line of the log.
+# One of the core's commands; its result is the last OffLokTest line of the log. adb shell joins its arguments into
+# one command line, where an empty one would vanish: a value goes only when there is one.
 core() {
+	local value=()
+	[ -z "${2:-}" ] || value=(--es value "$2")
 	adb logcat -c
-	adb shell am broadcast -n "$pkg/.TestCommand" --es cmd "$1" --es value "${2:-}" >/dev/null
-	wait_until 20 sh -c "adb logcat -d -s OffLokTest:I | grep -q ': {'"
+	adb shell am broadcast -n "$pkg/.TestCommand" --es cmd "$1" "${value[@]}" >/dev/null ||
+		{ echo "# the broadcast for $1 failed" >&2; return 1; }
+	wait_until 10 sh -c "adb logcat -d -s OffLokTest:I | grep -q ': {'" ||
+		{ echo "# no answer to $1" >&2; return 1; }
 	adb logcat -d -s OffLokTest:I | grep ': {' | tail -1 | sed 's/^[^{]*//'
 }
 state_is() { core status | grep -Eq "\"state\":\"($1)\""; }

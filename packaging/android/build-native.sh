@@ -16,7 +16,7 @@ grep -q "^Pkg.Revision = $NDK_VERSION\$" "$ndk/source.properties" ||
 tc=$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin
 work=$PWD/bin/android/native-build
 out=$PWD/internal/libunbound/_native
-jobs=$(nproc)
+jobs=${JOBS:-$(nproc)} # JOBS: fewer, on a machine that serves others
 mkdir -p "$work" "$out"
 
 fetch() { # url sha256 file
