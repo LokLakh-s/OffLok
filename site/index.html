@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <title>OffLok — ton ordinateur, son propre DNS</title>
-  <meta name="description" content="OffLok, logiciel libre et gratuit pour Windows, Mac et Linux, fait de ton ordinateur son propre DNS : il trouve lui-même l'adresse des sites, sans fournisseur d'accès, Google ni Cloudflare au milieu.">
+  <meta name="description" content="OffLok, logiciel libre et gratuit pour Windows, Mac, Linux et Android, fait de ton ordinateur son propre DNS : il trouve lui-même l'adresse des sites, sans fournisseur d'accès, Google ni Cloudflare au milieu.">
   <link rel="canonical" href="https://offlok.org/">
   <link rel="alternate" hreflang="fr" href="https://offlok.org/">
   <link rel="alternate" hreflang="en" href="https://offlok.org/en/">
@@ -108,12 +108,11 @@
         <h1>L'annuaire d'Internet, <span class="grad">chez toi</span>.</h1>
         <p class="lead">OffLok fait de ton ordinateur son propre <strong>DNS</strong>, l'annuaire qui transforme le nom d'un site en adresse. Il va chercher chaque réponse à la source, en partant de la racine d'Internet : plus de fournisseur d'accès, de Google ou de Cloudflare au milieu pour recevoir la liste de tous les sites que tu visites.</p>
         <div class="cta">
-          <a class="btn btn-gold" href="#download" data-cta data-label-windows="Télécharger pour Windows" data-label-linux="Télécharger pour Linux" data-label-mac="Télécharger pour Mac" data-label-mobile="Pour ordinateur"><svg class="icon"><use href="#i-download"/></svg><span>Télécharger OffLok</span></a>
+          <a class="btn btn-gold" href="#download" data-cta data-label-windows="Télécharger pour Windows" data-label-linux="Télécharger pour Linux" data-label-mac="Télécharger pour Mac" data-label-android="Télécharger pour Android" data-label-ios="Pour ordinateur et Android"><svg class="icon"><use href="#i-download"/></svg><span>Télécharger OffLok</span></a>
           <a class="btn btn-ghost" href="#dns">C'est quoi, un DNS ?</a>
         </div>
         <p class="reassure">
-          <span><svg class="icon"><use href="#i-check"/></svg>Windows, Mac et Linux</span>
-          <span><svg class="icon"><use href="#i-check"/></svg>Bientôt sur Android</span>
+          <span><svg class="icon"><use href="#i-check"/></svg>Windows, Mac, Linux et Android</span>
           <span><svg class="icon"><use href="#i-check"/></svg>Réversible en un clic</span>
         </p>
       </div>
@@ -382,16 +381,35 @@ sudo dnf install ./offlok-{{VERSION}}-1.x86_64.rpm ./offlok-desktop-{{VERSION}}-
           </div>
         </article>
 
-        <div class="soon-row">
-          <article class="soon" data-os="mobile">
-            <span class="yours">Ton système</span>
+        <article class="platform" data-os="android" id="android">
+          <span class="yours">Ton système</span>
+          <div class="platform-head">
             <span class="ico"><svg class="icon"><use href="#i-phone"/></svg></span>
             <div>
-              <h3>Android <span class="chip">en préparation</span></h3>
-              <p>Bientôt sur Google Play et F-Droid ; l'iPhone viendra plus tard. Pour l'instant, OffLok s'installe sur un ordinateur.</p>
+              <h3>Android</h3>
+              <p>Android 9 ou plus récent</p>
             </div>
-          </article>
-        </div>
+          </div>
+          <a class="btn btn-gold btn-block btn-col" href="https://github.com/LokLakh-s/OffLok/releases/download/v{{VERSION}}/offlok-{{VERSION}}.apk">
+            <span class="btn-row"><svg class="icon"><use href="#i-download"/></svg>Télécharger pour Android</span>
+            <span class="file">offlok-{{VERSION}}.apk</span>
+          </a>
+          <ol class="howto">
+            <li>Ouvre le fichier téléchargé. Android demande d'autoriser ton navigateur à installer des applis : accepte, puis touche <b>Installer</b>.
+              <span class="why">C'est normal pour une appli installée hors des magasins. OffLok arrive bientôt sur <span class="nobreak">F-Droid</span> et Google Play.</span></li>
+            <li>Ouvre OffLok et allume-le. Android te demande d'accepter sa connexion VPN : OffLok s'en sert pour répondre au DNS du téléphone, et rien d'autre ne passe par lui.</li>
+            <li>C'est fini : une petite clé s'affiche en haut de l'écran tant qu'OffLok est allumé, et tu peux ajouter sa vignette aux réglages rapides.</li>
+          </ol>
+        </article>
+
+        <article class="soon" data-os="ios">
+          <span class="yours">Ton système</span>
+          <span class="ico"><svg class="icon"><use href="#i-phone"/></svg></span>
+          <div>
+            <h3>iPhone <span class="chip">plus tard</span></h3>
+            <p>OffLok viendra plus tard sur l'iPhone et l'iPad. En attendant, il s'installe sur ton ordinateur et sur Android.</p>
+          </div>
+        </article>
       </div>
 
       <div class="more">

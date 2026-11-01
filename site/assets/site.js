@@ -3,11 +3,13 @@
 const root = document.documentElement;
 root.classList.add("js");
 
-// The visitor's system, from what the browser says. Phones before Linux: Android's user agent says "Linux".
+// The visitor's system, from what the browser says. Phones before Linux: Android's user agent says "Linux"; an
+// iPad says it is a Mac, with a touch screen.
 function detect() {
   const ua = navigator.userAgent;
   const platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
-  if (/Android|iPhone|iPad|iPod/i.test(ua) || (/Mac/i.test(platform) && navigator.maxTouchPoints > 1)) return "mobile";
+  if (/Android/i.test(ua)) return "android";
+  if (/iPhone|iPad|iPod/i.test(ua) || (/Mac/i.test(platform) && navigator.maxTouchPoints > 1)) return "ios";
   if (/Win/i.test(platform) || /Windows/i.test(ua)) return "windows";
   if (/Mac/i.test(platform) || /Mac OS X/i.test(ua)) return "mac";
   if (/Linux|X11|CrOS/i.test(platform + ua)) return "linux";
