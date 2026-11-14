@@ -5,20 +5,57 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
 // stateDirSDDL: SYSTEM and administrators may do anything in OffLok's own folder, users only read it (the log, for
-// a bug report). Protected: nothing comes from ProgramData, which lets every user create folders and files.
-const stateDirSDDL = "D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)"
+// a bug report), and LocalService, which Unbound runs as, too (its configuration). Protected: nothing comes from
+// ProgramData, which lets every user create folders and files.
+const stateDirSDDL = "D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)(A;OICI;0x1200a9;;;LS)"
+
+// Unbound, as LocalService, may change its keys folder, where it rewrites the root's trust anchor on key rollovers,
+// and run its program (unboundKeysSDDL, unboundBinSDDL: added to what the folders inherit).
+const (
+	unboundKeysSDDL = "D:AI(A;OICI;0x1301bf;;;LS)"
+	unboundBinSDDL  = "D:AI(A;OICI;0x1200a9;;;LS)"
+)
+
+// unboundKeys is the keys folder, where files LocalService owns are Unbound's own (secureStateDir leaves them).
+var unboundKeys string
+
+// grantUnbound lets LocalService run Unbound's program, in binDir, and change its keys folder, in unboundDir.
+func grantUnbound(binDir, unboundDir string) error {
+	keys := filepath.Join(unboundDir, "keys")
+	if err := os.MkdirAll(keys, 0o755); err != nil {
+		return err
+	}
+	for _, g := range []struct{ path, sddl string }{{keys, unboundKeysSDDL}, {binDir, unboundBinSDDL}} {
+		sd, err := windows.SecurityDescriptorFromString(g.sddl)
+		if err != nil {
+			return err
+		}
+		dacl, _, err := sd.DACL()
+		if err != nil {
+			return err
+		}
+		// The folder's own entries become this one; what it inherits stays, and its files inherit both.
+		if err := windows.SetNamedSecurityInfo(g.path, windows.SE_FILE_OBJECT,
+			windows.DACL_SECURITY_INFORMATION|windows.UNPROTECTED_DACL_SECURITY_INFORMATION, nil, nil, dacl, nil); err != nil {
+			return fmt.Errorf("%s: set its permissions: %w", g.path, err)
+		}
+	}
+	return nil
+}
 
 // secureStateDir makes C:\ProgramData\OffLok offlokd's alone. A user who created it, or something in it, before
 // OffLok came could otherwise change what offlokd (SYSTEM) reads and writes there, Unbound's configuration among
 // it. Links and anything not owned by SYSTEM or the administrators go; the folder's permissions are then reset,
 // and every file in it inherits them.
 func secureStateDir(dir string) error {
+	unboundKeys = filepath.Join(dir, "unbound", "keys")
 	sd, err := windows.SecurityDescriptorFromString(stateDirSDDL)
 	if err != nil {
 		return err
@@ -104,10 +141,24 @@ func dropUntrusted(path string) error {
 	if err != nil {
 		return err
 	}
-	if !ok {
+	if !ok && !unboundsOwn(path) {
 		return removeTree(path)
 	}
 	return nil
+}
+
+// unboundsOwn reports whether path is a file in the keys folder owned by LocalService: the trust anchor Unbound
+// rewrote. Nobody but a program running as LocalService can make one.
+func unboundsOwn(path string) bool {
+	if unboundKeys == "" || !strings.EqualFold(filepath.Dir(path), unboundKeys) {
+		return false
+	}
+	sd, err := windows.GetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		return false
+	}
+	owner, _, err := sd.Owner()
+	return err == nil && owner.IsWellKnown(windows.WinLocalServiceSid)
 }
 
 // cleanTree goes through path and what is under it, dropping links and anything not owned by SYSTEM or the

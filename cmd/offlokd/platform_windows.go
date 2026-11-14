@@ -20,7 +20,7 @@ import (
 
 const serviceName = "OffLok"
 
-// Windows has no account to drop to: Unbound runs as offlokd does, SYSTEM.
+// Unbound takes no account to drop to on Windows: offlokd starts it as LocalService (internal/unbound).
 const unboundUser = ""
 
 var platformUsage = [2]string{" | install [updates=off] | uninstall",
@@ -105,6 +105,12 @@ func runService(stateDir, unboundDir, socket string) error {
 	}
 	if err := secureStateDir(stateDir); err != nil {
 		return err
+	}
+	// Unbound runs as LocalService (internal/unbound): without these rights, it runs as SYSTEM.
+	if bin, err := findUnbound(); err == nil {
+		if err := grantUnbound(filepath.Dir(bin), unboundDir); err != nil {
+			log.Printf("unbound's rights for LocalService: %v", err)
+		}
 	}
 	if isService {
 		s := &service{stateDir: stateDir, unboundDir: unboundDir, socket: socket}

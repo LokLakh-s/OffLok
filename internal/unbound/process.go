@@ -3,7 +3,6 @@ package unbound
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -51,39 +50,37 @@ type Process struct {
 	Log      func(line string) // Unbound's own log lines (it never logs queried names with our config)
 
 	mu   sync.Mutex
-	cmd  *exec.Cmd
+	proc *os.Process
 	done chan struct{}
 	err  error
+}
+
+// launched is one Unbound that the system's launch started: launch (process_unix.go, process_windows.go) runs
+// it as Unbound's own account where it can, tied to offlokd so that it never outlives it.
+type launched struct {
+	proc    *os.Process
+	stderr  io.Reader    // its log, stdout included
+	wait    func() error // waits until it exits
+	release func()       // once it has exited
 }
 
 // Start launches Unbound. It returns once the process exists, not once it answers: the caller probes for that.
 func (p *Process) Start() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.cmd != nil {
+	if p.proc != nil {
 		return errors.New("unbound already started")
 	}
 	killStale(p.Binary, p.ConfPath)
-	cmd := exec.Command(p.Binary, "-d", "-c", p.ConfPath)
-	cmd.SysProcAttr = sysProcAttr()
-	stderr, err := cmd.StderrPipe()
+	l, err := launch(p.Binary, p.ConfPath, p.Log)
 	if err != nil {
 		return err
 	}
-	cmd.Stdout = cmd.Stderr
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start unbound: %w", err)
-	}
-	release, err := afterStart(cmd.Process)
-	if err != nil {
-		_ = cmd.Process.Kill()
-		return fmt.Errorf("tie unbound to offlokd: %w", err)
-	}
-	p.cmd, p.done, p.err = cmd, make(chan struct{}), nil
-	go p.pipe(stderr)
+	p.proc, p.done, p.err = l.proc, make(chan struct{}), nil
+	go p.pipe(l.stderr)
 	go func(done chan struct{}) {
-		err := cmd.Wait()
-		release()
+		err := l.wait()
+		l.release()
 		p.mu.Lock()
 		p.err = err
 		p.mu.Unlock()
@@ -93,6 +90,9 @@ func (p *Process) Start() error {
 }
 
 func (p *Process) pipe(r io.Reader) {
+	if c, ok := r.(io.Closer); ok {
+		defer c.Close() // once Unbound's log ends (exec's Wait closes its pipe again, which does nothing)
+	}
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		if p.Log != nil {
@@ -105,7 +105,7 @@ func (p *Process) pipe(r io.Reader) {
 func (p *Process) Running() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.cmd == nil {
+	if p.proc == nil {
 		return false
 	}
 	select {
@@ -127,31 +127,31 @@ func (p *Process) Exited() <-chan struct{} {
 func (p *Process) Reload() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.cmd == nil {
+	if p.proc == nil {
 		return errors.New("unbound not started")
 	}
-	return reload(p.cmd.Process)
+	return reload(p.proc)
 }
 
 // Stop ends Unbound, killing it if it has not stopped after timeout.
 func (p *Process) Stop(timeout time.Duration) error {
 	p.mu.Lock()
-	cmd, done := p.cmd, p.done
+	proc, done := p.proc, p.done
 	p.mu.Unlock()
-	if cmd == nil {
+	if proc == nil {
 		return nil
 	}
-	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil { // Windows has no SIGTERM
-		_ = cmd.Process.Kill()
+	if err := proc.Signal(syscall.SIGTERM); err != nil { // Windows has no SIGTERM
+		_ = proc.Kill()
 	}
 	select {
 	case <-done:
 	case <-time.After(timeout):
-		_ = cmd.Process.Kill()
+		_ = proc.Kill()
 		<-done
 	}
 	p.mu.Lock()
-	p.cmd, p.done = nil, nil
+	p.proc, p.done = nil, nil
 	p.mu.Unlock()
 	return nil
 }
