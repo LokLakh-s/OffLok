@@ -1,8 +1,8 @@
 #!/bin/bash
 # OffLok's macOS package, built on a Mac after build-unbound.sh: dist/offlok-<version>.pkg, for Apple silicon and
 # Intel, macOS 13 or later. Unsigned (no Apple Developer account yet): the site says how to open it. It installs
-#   /usr/local/libexec/offlok/   offlokd, Unbound, uninstall.sh
-#   /usr/local/bin/offlok        the command
+#   /usr/local/libexec/offlok/   offlokd, the command, Unbound, uninstall.sh: root's alone
+#   /usr/local/bin/offlok        a link to the command (Homebrew makes /usr/local/bin its user's, on Intel Macs)
 #   /Applications/OffLok.app     the menu bar icon and its window, started at every login by
 #   /Library/LaunchAgents/org.loklakh.offlok.desktop.plist
 # and its script has launchd start offlokd (offlokd install). VERSION and DIST (dist/ by default) may be given: the
@@ -30,7 +30,8 @@ for arch in arm64 amd64; do
 		go build -trimpath -ldflags "$ldflags" -o "../$build/$arch/offlok-desktop" .)
 done
 lipo -create "$build/arm64/offlokd" "$build/amd64/offlokd" -output "$root/usr/local/libexec/offlok/offlokd"
-lipo -create "$build/arm64/offlok" "$build/amd64/offlok" -output "$root/usr/local/bin/offlok"
+lipo -create "$build/arm64/offlok" "$build/amd64/offlok" -output "$root/usr/local/libexec/offlok/offlok"
+ln -s ../libexec/offlok/offlok "$root/usr/local/bin/offlok"
 lipo -create "$build/arm64/offlok-desktop" "$build/amd64/offlok-desktop" -output "$app/Contents/MacOS/offlok-desktop"
 cp bin/darwin/unbound/unbound bin/darwin/unbound/LICENSE bin/darwin/unbound/OPENSSL-LICENSE.txt \
 	"$root/usr/local/libexec/offlok/unbound/"

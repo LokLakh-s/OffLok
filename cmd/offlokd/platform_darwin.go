@@ -20,7 +20,6 @@ import (
 	"github.com/loklakh-s/offlok/internal/ipc"
 	"github.com/loklakh-s/offlok/internal/settings"
 	"github.com/loklakh-s/offlok/internal/sysdns"
-	"github.com/loklakh-s/offlok/internal/unbound"
 )
 
 const (
@@ -47,15 +46,18 @@ func checkPrivileges() error {
 	return nil
 }
 
-// findUnbound: the .pkg puts its Unbound next to offlokd; otherwise Homebrew's.
+// findUnbound: the .pkg puts its Unbound next to offlokd. Never one found elsewhere: offlokd starts it as root, and
+// Homebrew's folders are its user's to change.
 func findUnbound() (string, error) {
-	if exe, err := os.Executable(); err == nil {
-		p := filepath.Join(filepath.Dir(exe), "unbound", "unbound")
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
-		}
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
 	}
-	return unbound.FindBinary()
+	p := filepath.Join(filepath.Dir(exe), "unbound", "unbound")
+	if _, err := os.Stat(p); err != nil {
+		return "", fmt.Errorf("unbound is not installed next to offlokd: %w", err)
+	}
+	return p, nil
 }
 
 // macOS has no polkit: an administrator is root (sudo); the app asks macOS for an administrator itself.

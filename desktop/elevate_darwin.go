@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // notRunningKey is the tray's tooltip when offlokd does not answer: how to start it here.
@@ -14,15 +16,25 @@ const notRunningKey = "err.not-running.macos"
 // errCancelled: the user closed macOS's password prompt.
 var errCancelled = errors.New("cancelled")
 
-// offlokCommand finds the offlok command: the package's, or Homebrew's. An app opened from the Finder has a PATH
-// with neither.
-func offlokCommand() (string, error) {
-	for _, p := range []string{"/usr/local/bin/offlok", "/opt/homebrew/bin/offlok"} {
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
+// offlokCommand is the command the package installs where only root may change it: what macOS's prompt runs as
+// root must not be a file its user can replace (Homebrew makes /usr/local/bin and /opt/homebrew/bin its user's).
+const offlokCommand = "/usr/local/libexec/offlok/offlok"
+
+// rootsAlone checks that path and every folder above it belong to root and that nobody else may write to them.
+func rootsAlone(path string) error {
+	for p := path; ; p = filepath.Dir(p) {
+		st, err := os.Lstat(p)
+		if err != nil {
+			return err
+		}
+		sys, ok := st.Sys().(*syscall.Stat_t)
+		if !ok || sys.Uid != 0 || st.Mode().Perm()&0o022 != 0 || st.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%s may be changed by someone other than root, so OffLok does not run %s as an administrator (sudo %s still works)", p, path, path)
+		}
+		if p == "/" {
+			return nil
 		}
 	}
-	return "", errors.New("the offlok command is not installed")
 }
 
 // appleScriptString quotes s for AppleScript: backslashes and double quotes escaped.
@@ -34,8 +46,8 @@ func appleScriptString(s string) string {
 // where the Mac has it), as polkit's does on Linux and UAC on Windows. It waits for the command and reports its
 // outcome.
 func elevate(cmd, value string) error {
-	offlok, err := offlokCommand()
-	if err != nil {
+	offlok := offlokCommand
+	if err := rootsAlone(offlok); err != nil {
 		return err
 	}
 	// The shell line is made of quoted words: AppleScript's `quoted form of` quotes each one for the shell.
