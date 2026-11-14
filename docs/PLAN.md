@@ -399,6 +399,11 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
     says so, with a button to the setting.
   - Android runs one VPN at a time: turning another VPN app on turns OffLok off (it never takes the VPN back by
     itself), and the window says why.
+  - "Always-on VPN" with **"Block connections without VPN"** cuts every connection that does not go through the
+    VPN, and OffLok's carries DNS only: no page loads (seen by the maintainer on a OnePlus 6T, Android 11,
+    2026-11-14). Android 10 or later tells the VPN service (`isLockdownEnabled`), when the tunnel opens and each
+    time the window comes back: the window then says so, with a button to Android's VPN settings. Android 9 cannot
+    tell.
 - **Left out on Android:** settings access levels (one user), the command line, and the updater: Google Play and
   F-Droid update the app themselves, and the GitHub APK is updated with F-Droid, IzzyOnDroid or Obtainium.
 - **Requirements:** Android 9 or later (API 28, where the Private DNS state can be read), on arm64-v8a,
@@ -467,7 +472,9 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
     for the maintainer's approval as every release's does (below). A version in progress ships the new Unbound
     with its own release;
   - GitHub turns a public repository's schedules off after 60 days without activity: the Actions tab's
-    "Enable workflow" turns it back on.
+    "Enable workflow" turns it back on. Dependabot's weekly branches are expected to keep the repository active
+    (decided 2026-11-14, rather than a keep-alive: such a tool, keepalive-workflow, was blocked by GitHub under its
+    terms; or a daily dispatch from the maintainer's server, which needs a token of its own).
 - **The app checks for updates** and offers them. Before installing one, it verifies the signature. The check is
   **on by default and can be turned off** (decided 2026-10-30): once a day it asks GitHub, which then sees the
   computer's address and that it runs OffLok. The Windows installer says so next to a ticked box, the window has
@@ -596,8 +603,6 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 - **Android:** whether F-Droid's build server builds Go, OpenSSL and Unbound for the NDK, and byte for byte the
   same APK as ours.
 - **Android:** the battery a resolver running all day costs.
-- **Android:** whether "Always-on VPN" with "Block connections without VPN" cuts every connection that does not go
-  through OffLok's tunnel, which carries DNS only; the window should then say so (`VpnService.isLockdownEnabled`).
 - **VPNs:** a full-tunnel VPN that declares no domain. Should its DNS take over, or should recursion stay?
 - **Search domains on Linux:** systemd-resolved itself sends the names of a link's search domains to that link's DNS
   (its routing rules), before OffLok sees them: OffLok's check of the network's domains does not cover that. And on

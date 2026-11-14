@@ -2,6 +2,13 @@
 
 What changes from one OffLok release to the next. Each release's notes on GitHub start with its section here.
 
+## 0.6.3
+
+- **Android:** with "Always-on VPN" and "Block connections without VPN" on, Android cuts every connection that does
+  not go through OffLok, whose VPN carries DNS only: no page loads. The window now says so, with a button to
+  Android's VPN settings, where that second setting can go off (Always-on VPN can stay on). Android 10 or later.
+- **The window and the tray icon** use Wails 3.1.0.
+
 ## 0.6.2
 
 - **Windows: Unbound runs as LocalService, no longer as SYSTEM.** It reads what any server on the internet sends: a

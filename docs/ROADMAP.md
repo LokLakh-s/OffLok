@@ -116,7 +116,8 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 - [x] Windows: Unbound as LocalService (its token, LocalService's own window station: `unbound.exe` imports USER32);
       the fallback to a DNS-over-TLS resolver tested behind the firewall
 - [x] offlok.org: a privacy policy, in French and English (Google Play asks for one)
-- [ ] Android: what "Block connections without VPN" does to a VPN that carries DNS only, and a warning if need be
+- [x] Android: "Block connections without VPN" cuts every connection but DNS (seen on a real phone): the window
+      says so, with a button to Android's VPN settings (Android 10 or later)
 
 ## 8. Later
 
