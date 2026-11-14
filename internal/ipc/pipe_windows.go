@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"runtime"
@@ -21,8 +22,11 @@ const pipeSDDL = "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;AU)"
 
 const pipeRejectRemoteClients = 0x00000008
 
-// x/sys/windows has no ImpersonateNamedPipeClient.
-var procImpersonateNamedPipeClient = windows.NewLazySystemDLL("advapi32.dll").NewProc("ImpersonateNamedPipeClient")
+// x/sys/windows has neither ImpersonateNamedPipeClient nor CancelSynchronousIo.
+var (
+	procImpersonateNamedPipeClient = windows.NewLazySystemDLL("advapi32.dll").NewProc("ImpersonateNamedPipeClient")
+	procCancelSynchronousIo        = windows.NewLazySystemDLL("kernel32.dll").NewProc("CancelSynchronousIo")
+)
 
 func impersonateNamedPipeClient(h windows.Handle) error {
 	if r, _, err := procImpersonateNamedPipeClient.Call(uintptr(h)); r == 0 {
@@ -160,23 +164,95 @@ func pipePeer(h windows.Handle) (Peer, error) {
 	return Peer{PID: int(pid), Admin: (member && tok.IsElevated()) || isSystem}, nil
 }
 
+// pipeConn is the server's end of one client's pipe. Its handle does synchronous I/O, which no deadline reaches:
+// a deadline cancels the read or write under way from outside (CancelSynchronousIo on the thread doing it), so
+// that a client who connects and sends nothing does not hold offlokd's goroutine and handle for ever.
 type pipeConn struct {
 	*os.File
 	h windows.Handle
+
+	mu       sync.Mutex
+	deadline time.Time
+	timer    *time.Timer
+	thread   windows.Handle // the thread in Read or Write, 0 when none
 }
 
 // Close lets the client read everything written before the pipe goes.
 func (c *pipeConn) Close() error {
+	c.mu.Lock()
+	if c.timer != nil {
+		c.timer.Stop()
+	}
+	c.mu.Unlock()
 	_ = windows.FlushFileBuffers(c.h)
 	_ = windows.DisconnectNamedPipe(c.h)
 	return c.File.Close()
 }
 
+func (c *pipeConn) Read(b []byte) (int, error) {
+	return c.io(func() (int, error) { return c.File.Read(b) })
+}
+func (c *pipeConn) Write(b []byte) (int, error) {
+	return c.io(func() (int, error) { return c.File.Write(b) })
+}
+
+// io runs one read or write on this goroutine's own thread, which the deadline's timer can then cancel.
+func (c *pipeConn) io(f func() (int, error)) (int, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var th windows.Handle
+	self := windows.CurrentProcess()
+	if err := windows.DuplicateHandle(self, windows.CurrentThread(), self, &th, 0, false, windows.DUPLICATE_SAME_ACCESS); err != nil {
+		return 0, err
+	}
+	defer windows.CloseHandle(th)
+	c.mu.Lock()
+	if !c.deadline.IsZero() && !time.Now().Before(c.deadline) {
+		c.mu.Unlock()
+		return 0, os.ErrDeadlineExceeded
+	}
+	c.thread = th
+	c.mu.Unlock()
+	n, err := f()
+	c.mu.Lock()
+	c.thread = 0
+	c.mu.Unlock()
+	if errors.Is(err, windows.ERROR_OPERATION_ABORTED) {
+		err = os.ErrDeadlineExceeded
+	}
+	return n, err
+}
+
+// expire cancels the read or write under way. One that has not quite started yet is cancelled a moment later.
+func (c *pipeConn) expire() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.thread == 0 || c.deadline.IsZero() || time.Now().Before(c.deadline) {
+		return
+	}
+	if r, _, _ := procCancelSynchronousIo.Call(uintptr(c.thread)); r == 0 {
+		c.timer = time.AfterFunc(50*time.Millisecond, c.expire)
+	}
+}
+
+func (c *pipeConn) SetDeadline(t time.Time) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.deadline = t
+	if c.timer != nil {
+		c.timer.Stop()
+		c.timer = nil
+	}
+	if !t.IsZero() {
+		c.timer = time.AfterFunc(time.Until(t), c.expire)
+	}
+	return nil
+}
+
 func (c *pipeConn) LocalAddr() net.Addr                { return pipeAddr(c.Name()) }
 func (c *pipeConn) RemoteAddr() net.Addr               { return pipeAddr(c.Name()) }
-func (c *pipeConn) SetDeadline(t time.Time) error      { return nil }
-func (c *pipeConn) SetReadDeadline(t time.Time) error  { return nil }
-func (c *pipeConn) SetWriteDeadline(t time.Time) error { return nil }
+func (c *pipeConn) SetReadDeadline(t time.Time) error  { return c.SetDeadline(t) }
+func (c *pipeConn) SetWriteDeadline(t time.Time) error { return c.SetDeadline(t) }
 
 // peerOf identifies the client; Windows allows it only once the request was read from the pipe.
 func peerOf(c net.Conn) (Peer, error) {
@@ -205,6 +281,10 @@ func dial(name string) (net.Conn, error) {
 	for {
 		f, err := os.OpenFile(name, os.O_RDWR, 0)
 		if err == nil {
+			if err := checkServer(windows.Handle(f.Fd())); err != nil {
+				f.Close()
+				return nil, err
+			}
 			return clientConn{f}, nil
 		}
 		switch {
@@ -216,4 +296,25 @@ func dial(name string) (net.Conn, error) {
 			return nil, err
 		}
 	}
+}
+
+// checkServer makes sure the pipe is offlokd's: while offlokd is not running (a restart, before the service starts
+// at boot), any user may create a pipe of that name. Its owner is whoever made it, which nobody can forge: SYSTEM
+// (the service), the administrators (offlokd run by hand, elevated), or this caller itself.
+func checkServer(h windows.Handle) error {
+	sd, err := windows.GetSecurityInfo(h, windows.SE_KERNEL_OBJECT, windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		return fmt.Errorf("read the owner of offlokd's pipe: %w", err)
+	}
+	owner, _, err := sd.Owner()
+	if err != nil {
+		return err
+	}
+	if owner.IsWellKnown(windows.WinLocalSystemSid) || owner.IsWellKnown(windows.WinBuiltinAdministratorsSid) {
+		return nil
+	}
+	if me, err := windows.GetCurrentProcessToken().GetTokenUser(); err == nil && owner.Equals(me.User.Sid) {
+		return nil
+	}
+	return fmt.Errorf("%s belongs to %s, not to offlokd: another program took its name", DefaultSocket, owner)
 }

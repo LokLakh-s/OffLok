@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"time"
 )
@@ -39,6 +40,15 @@ type Peer struct {
 // A password prompt may stay open a while: interactive requests get this long.
 const interactiveTimeout = 3 * time.Minute
 
+// requestTimeout is how long a caller has to send its request (a variable for the tests).
+var requestTimeout = 30 * time.Second
+
+const (
+	maxRequest  = 64 << 10 // a request is a few words; a caller sending more is cut off
+	maxResponse = 16 << 20 // the status, lists included, is far smaller
+	maxCallers  = 32       // connections served at once; more wait in the kernel's queue, or fail
+)
+
 // Handler answers one request.
 type Handler func(Request, Peer) Response
 
@@ -48,18 +58,25 @@ func Serve(path string, h Handler) (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
+	busy := make(chan struct{}, maxCallers)
 	go func() {
 		for {
+			// A local user opening connections without end gets the channel's attention, not the service's memory.
+			busy <- struct{}{}
 			c, err := l.Accept()
 			if errors.Is(err, net.ErrClosed) {
 				return
 			}
 			if err != nil {
 				// A client gone at once (Windows's ERROR_NO_DATA): the channel stays open for the next.
+				<-busy
 				time.Sleep(50 * time.Millisecond)
 				continue
 			}
-			go handle(c, h)
+			go func() {
+				defer func() { <-busy }()
+				handle(c, h)
+			}()
 		}
 	}()
 	return l, nil
@@ -67,9 +84,9 @@ func Serve(path string, h Handler) (net.Listener, error) {
 
 func handle(c net.Conn, h Handler) {
 	defer c.Close()
-	_ = c.SetDeadline(time.Now().Add(30 * time.Second))
+	_ = c.SetDeadline(time.Now().Add(requestTimeout))
 	var req Request
-	if err := json.NewDecoder(c).Decode(&req); err != nil {
+	if err := json.NewDecoder(io.LimitReader(c, maxRequest)).Decode(&req); err != nil {
 		_ = json.NewEncoder(c).Encode(Response{Error: "bad request: " + err.Error()})
 		return
 	}
@@ -104,7 +121,7 @@ func Call(path string, req Request) (Response, error) {
 		return Response{}, err
 	}
 	var resp Response
-	if err := json.NewDecoder(c).Decode(&resp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(c, maxResponse)).Decode(&resp); err != nil {
 		return Response{}, fmt.Errorf("read offlokd's answer: %w", err)
 	}
 	return resp, nil
