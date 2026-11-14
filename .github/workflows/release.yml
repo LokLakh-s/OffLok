@@ -5,7 +5,8 @@
 # build provenance attestation once the repository is public.
 #
 # Every job runs on GitHub's own machines, never on a self-hosted one: SignPath, which will sign the Windows
-# programs, only signs what such a workflow built. The release key is the release environment's secret, which only v* tags reach.
+# programs, only signs what such a workflow built. Nothing compiled comes from a cache: OpenSSL, Unbound and
+# libunbound are built again from their checked sources, so that no other run's leftovers end up signed. The release key is the release environment's secret, which only v* tags reach.
 # Run by hand on a branch, it is a rehearsal: it builds and tests, and publishes nothing.
 name: Release
 
@@ -113,15 +114,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-
-      - name: OpenSSL's libraries, kept between runs of the same sources
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            bin/darwin/unbound-build/openssl-*-arm64
-            bin/darwin/unbound-build/openssl-*-x86_64
-            bin/darwin/unbound-build/*.tar.gz
-          key: macos-openssl-${{ hashFiles('packaging/macos/sources.env', 'packaging/macos/build-unbound.sh') }}
+          cache: false # no other run's build cache in what is signed
 
       - name: Unbound, with OpenSSL linked in, and the package
         run: |
@@ -152,6 +145,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          cache: false # no other run's build cache in what is signed
 
       - name: The NDK and the SDK, as android.env pins them
         run: |
@@ -159,14 +153,6 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" \
             "platforms;android-$ANDROID_TARGET_API" "build-tools;$ANDROID_BUILD_TOOLS" >/dev/null
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >>"$GITHUB_ENV"
-
-      - name: libunbound and OpenSSL, kept between runs of the same sources
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            internal/libunbound/_native
-            bin/android/native-build/*.tar.gz
-          key: android-native-${{ hashFiles('packaging/macos/sources.env', 'packaging/android/android.env', 'packaging/android/build-native.sh') }}
 
       - name: libunbound and OpenSSL, the core, the app (unsigned; Google Play's as a bundle)
         run: |
