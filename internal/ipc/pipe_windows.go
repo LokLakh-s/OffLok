@@ -177,14 +177,15 @@ type pipeConn struct {
 	thread   windows.Handle // the thread in Read or Write, 0 when none
 }
 
-// Close lets the client read everything written before the pipe goes.
+// Close lets the client read everything written before the pipe goes, within the deadline: FlushFileBuffers waits
+// until the client has read it all, and a client that never reads would otherwise hold the connection for ever.
 func (c *pipeConn) Close() error {
+	_, _ = c.io(func() (int, error) { return 0, windows.FlushFileBuffers(c.h) })
 	c.mu.Lock()
 	if c.timer != nil {
 		c.timer.Stop()
 	}
 	c.mu.Unlock()
-	_ = windows.FlushFileBuffers(c.h)
 	_ = windows.DisconnectNamedPipe(c.h)
 	return c.File.Close()
 }

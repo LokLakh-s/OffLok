@@ -53,6 +53,7 @@ resolves() { [ -n "$(lookup "$1")" ]; }
 refused() { [ -z "$(lookup "$1")" ]; }
 # OffLok answers 0.0.0.0 for a blocked name; ping takes that address for the phone itself and shows 127.0.0.1.
 blocked() { case $(lookup "$1") in 0.0.0.0 | 127.0.0.1) true ;; *) false ;; esac; }
+offlok_blocks() { core check "$1" | grep -q '"blocked":true'; }
 tunnel() { adb shell ip -brief addr show tun0 2>/dev/null | grep -q '10\.111\.222\.2/32'; }
 no_tunnel() { ! tunnel; }
 
@@ -71,6 +72,9 @@ check 'a broken DNSSEC signature is refused' refused dnssec-failed.org
 
 core block ads=on >/dev/null
 check 'ads: the list is downloaded' wait_until 90 sh -c "adb logcat -d | grep -q 'AdGuard DNS filter: [0-9]* names'"
+# The list is compiled a moment after its count shows: the phone asks only once OffLok blocks the name, since Android
+# would keep a real answer asked in between for its whole TTL (it has no way to empty its cache).
+check 'ads: OffLok blocks doubleclick.net' wait_until 30 offlok_blocks doubleclick.net
 check 'ads: doubleclick.net is blocked' wait_until 15 blocked doubleclick.net
 echo "# doubleclick.net: ping says $(adb shell ping -c 1 -W 1 doubleclick.net 2>&1 | head -2 | tr '\n' '|')"
 echo "# OffLok's check: $(core check doubleclick.net | grep -o '"data":{[^}]*}')"

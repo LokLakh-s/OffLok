@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -56,9 +57,8 @@ func TestCallNotRunning(t *testing.T) {
 // A caller who connects and sends nothing, or sends without end, is let go: offlokd keeps no goroutine and no
 // handle for it (on Windows too, where the pipe's handle does synchronous I/O).
 func TestIdleAndOversizedCallers(t *testing.T) {
-	old := requestTimeout
-	requestTimeout = 300 * time.Millisecond
-	defer func() { requestTimeout = old }()
+	old := requestTimeout.Swap(int64(300 * time.Millisecond))
+	defer requestTimeout.Store(old)
 	path := testPath(t)
 	l, err := Serve(path, func(req Request, p Peer) Response { return Response{OK: true} })
 	if err != nil {
@@ -93,16 +93,39 @@ func TestIdleAndOversizedCallers(t *testing.T) {
 		done <- b
 	}()
 	select {
-	case b := <-done:
-		if !strings.Contains(string(b), "bad request") {
-			t.Errorf("an oversized request got %q", b)
-		}
+	case <-done: // cut off (on Unix, with "bad request"; Windows's client is busy writing, on a synchronous handle)
 	case <-time.After(5 * time.Second):
 		t.Fatal("an oversized request was read without end")
 	}
 
+	// More callers than offlokd serves at once ask and never read the answer: they are let go at their deadline
+	// (on Windows, where closing waits until the client has read everything, too).
+	for i := 0; i < maxCallers+1; i++ {
+		c, err := dial(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		if _, err := c.Write([]byte(`{"cmd":"status"}` + "\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	// The channel still answers.
-	if resp, err := Call(path, Request{Cmd: "status"}); err != nil || !resp.OK {
-		t.Fatalf("after them: %+v, %v", resp, err)
+	answered := make(chan error, 1)
+	go func() {
+		resp, err := Call(path, Request{Cmd: "status"})
+		if err == nil && !resp.OK {
+			err = errors.New(resp.Error)
+		}
+		answered <- err
+	}()
+	select {
+	case err := <-answered:
+		if err != nil {
+			t.Fatalf("after them: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("callers that never read hold the channel")
 	}
 }

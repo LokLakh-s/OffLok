@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
@@ -40,8 +41,10 @@ type Peer struct {
 // A password prompt may stay open a while: interactive requests get this long.
 const interactiveTimeout = 3 * time.Minute
 
-// requestTimeout is how long a caller has to send its request (a variable for the tests).
-var requestTimeout = 30 * time.Second
+// requestTimeout is how long a caller has to send its request, in nanoseconds (the tests shorten it).
+var requestTimeout atomic.Int64
+
+func init() { requestTimeout.Store(int64(30 * time.Second)) }
 
 const (
 	maxRequest  = 64 << 10 // a request is a few words; a caller sending more is cut off
@@ -84,7 +87,7 @@ func Serve(path string, h Handler) (net.Listener, error) {
 
 func handle(c net.Conn, h Handler) {
 	defer c.Close()
-	_ = c.SetDeadline(time.Now().Add(requestTimeout))
+	_ = c.SetDeadline(time.Now().Add(time.Duration(requestTimeout.Load())))
 	var req Request
 	if err := json.NewDecoder(io.LimitReader(c, maxRequest)).Decode(&req); err != nil {
 		_ = json.NewEncoder(c).Encode(Response{Error: "bad request: " + err.Error()})
