@@ -85,7 +85,7 @@ Get-NetFirewallRule -DisplayName 'OffLok test: no * DNS out' | Remove-NetFirewal
 foreach ($p in $profiles) { Set-NetFirewallProfile -Name $p.Name -Enabled $p.Enabled }
 & $offlok dot none | Out-Null
 Check 'the root back, no resolver set: as before' {
-    Wait-Until 120 { $st = & $offlok status; ($st -match '^(On|Fallback):') -and -not ($st -match 'DNS-over-TLS') }
+    Wait-Until 120 { $st = & $offlok status; ($st -match '^(On|Fallback):') -and -not ($st -match 'using your DNS-over-TLS') }
 }
 
 Start-Process (Join-Path $dir 'offlok-desktop.exe') -ArgumentList '--hidden'
