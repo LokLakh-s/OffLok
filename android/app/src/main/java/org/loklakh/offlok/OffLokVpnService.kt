@@ -64,6 +64,16 @@ class OffLokVpnService : VpnService() {
             return checkNotNull(service) { "OffLok's VPN service did not start" }
         }
 
+        /**
+         * Tells the core whether Android blocks connections without VPN (Android 10 or later can say): OffLok's VPN
+         * carries DNS only, so every other connection is then cut, which the window says. Read from the running
+         * service; none running, the last answer stands. Never on the main thread.
+         */
+        fun reportLockdown() {
+            if (Build.VERSION.SDK_INT < 29) return
+            service?.let { org.loklakh.offlok.mobile.Mobile.setLockdown(it.isLockdownEnabled) }
+        }
+
         /** The core closed the tunnel, or Android did: the service may end. */
         @Synchronized
         fun close(context: Context) {
@@ -107,6 +117,8 @@ class OffLokVpnService : VpnService() {
             builder.setMetered(false)
         }
         val tunnel = checkNotNull(builder.establish()) { "Android refused OffLok's VPN" }
+        // Not now: the core waits for this tunnel, and takes its own lock to hear the answer.
+        Thread { reportLockdown() }.start()
         return tunnel.detachFd().toLong()
     }
 

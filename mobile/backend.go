@@ -25,6 +25,9 @@ var tunnelAddrs = []netip.Addr{netip.MustParseAddr("10.111.222.1"), netip.MustPa
 const (
 	warnPrivateDNS = "android-private-dns" // a Private DNS hostname sends every query around OffLok
 	warnOtherVPN   = "android-other-vpn"   // another VPN app took OffLok's place: OffLok turned off
+	// Android blocks connections without VPN: OffLok's carries DNS only, so every other connection is cut (seen on a
+	// OnePlus 6T, Android 11, 2026-11-14: a page would not load).
+	warnLockdown = "android-lockdown"
 )
 
 var errOtherVPN = errors.New("another VPN app took OffLok's place")
@@ -56,6 +59,7 @@ type backend struct {
 	id         string // the network's identity, from the app
 	privateDNS string // the network's Private DNS hostname, when one is set
 	otherVPN   bool   // set when the tunnel went away by itself, until OffLok is turned on again
+	lockdown   bool   // Android's "Block connections without VPN", as the app last saw it
 	tunnel     *os.File
 	serving    chan struct{} // closed when the tunnel's reader ends
 }
@@ -189,10 +193,19 @@ func (b *backend) Warning() string {
 	switch {
 	case b.otherVPN:
 		return warnOtherVPN
+	case b.lockdown:
+		return warnLockdown
 	case b.privateDNS != "":
 		return warnPrivateDNS
 	}
 	return ""
+}
+
+// setLockdown is what the app sees of Android's "Block connections without VPN" (VpnService.isLockdownEnabled).
+func (b *backend) setLockdown(on bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.lockdown = on
 }
 
 // setNetwork is what the app knows of the network the phone uses.

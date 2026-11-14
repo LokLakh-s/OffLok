@@ -165,6 +165,15 @@ func TestBackendNetwork(t *testing.T) {
 	if w := b.Warning(); w != warnPrivateDNS {
 		t.Errorf("warning %q, want %q", w, warnPrivateDNS)
 	}
+	// "Block connections without VPN" cuts every connection but DNS: it goes before the Private DNS hostname.
+	b.setLockdown(true)
+	if w := b.Warning(); w != warnLockdown {
+		t.Errorf("lockdown: warning %q, want %q", w, warnLockdown)
+	}
+	b.setLockdown(false)
+	if w := b.Warning(); w != warnPrivateDNS {
+		t.Errorf("lockdown off: warning %q, want %q", w, warnPrivateDNS)
+	}
 }
 
 func TestCABundle(t *testing.T) {

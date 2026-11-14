@@ -175,7 +175,11 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        refreshWindow()
+        // Back from Android's VPN settings, perhaps with "Block connections without VPN" changed.
+        Thread {
+            OffLokVpnService.reportLockdown()
+            runOnUiThread { refreshWindow() }
+        }.start()
     }
 
     override fun onDestroy() {

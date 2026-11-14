@@ -182,5 +182,17 @@ func Revoked() {
 	}
 }
 
+// SetLockdown tells the core whether Android blocks connections without VPN ("Always-on VPN" with "Block connections
+// without VPN", VpnService.isLockdownEnabled): OffLok's VPN carries DNS only, so Android then cuts every other
+// connection, which the window says.
+func SetLockdown(on bool) {
+	core.Lock()
+	b := core.b
+	core.Unlock()
+	if b != nil {
+		b.setLockdown(on)
+	}
+}
+
 // UnboundVersion is the version of the Unbound inside the app.
 func UnboundVersion() string { return libunbound.Version() }

@@ -247,7 +247,7 @@ $(".dot").addEventListener("submit", (e) => {
 });
 refresh();
 $("[data-action=settings]").addEventListener("click", () =>
-  api.settings(lastStatus.warning === "android-other-vpn" ? "vpn" : "network"),
+  api.settings(["android-other-vpn", "android-lockdown"].includes(lastStatus.warning) ? "vpn" : "network"),
 );
 $("[data-action=tile-add]").addEventListener("click", () => api.addTile());
 for (const b of document.querySelectorAll("[data-action=tile-later], [data-action=tile-ok]")) {

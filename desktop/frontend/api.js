@@ -19,6 +19,7 @@ const examples = {
   android: { state: "direct", platform: "android", backend: "android" },
   "android-private-dns": { state: "direct", platform: "android", backend: "android", warning: "android-private-dns" },
   "android-other-vpn": { state: "off", platform: "android", backend: "android", warning: "android-other-vpn" },
+  "android-lockdown": { state: "direct", platform: "android", backend: "android", warning: "android-lockdown" },
   updating: { state: "direct", update: { available: "0.6.0", state: "downloading" } },
   blocking: {
     state: "direct",

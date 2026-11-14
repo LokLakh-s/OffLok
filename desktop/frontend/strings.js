@@ -30,6 +30,8 @@ export const strings = {
       "Android's Private DNS is set to a hostname: every query goes to that server, around OffLok. Set it to Off or Automatic for OffLok to answer.",
     "warning.android-other-vpn":
       "Another VPN app started, or OffLok's VPN was turned off in Android's settings: Android runs one VPN at a time, so OffLok turned off. Turn it on to take that VPN's place.",
+    "warning.android-lockdown":
+      "Android's \"Block connections without VPN\" is on: OffLok's VPN carries DNS only, so Android cuts every other connection. Turn that setting off in OffLok's VPN settings (Always-on VPN can stay on).",
     "warning.settings": "Open Android's settings",
     "signin.button": "Sign in to this network",
     "signin.text": "Lets this network's DNS through for 5 minutes, the time to open its sign-in page.",
@@ -141,6 +143,8 @@ export const strings = {
       "Le DNS privé d'Android est réglé sur un nom d'hôte : toutes les requêtes partent vers ce serveur, en contournant OffLok. Règle-le sur Désactivé ou Automatique pour qu'OffLok réponde.",
     "warning.android-other-vpn":
       "Une autre appli VPN a démarré, ou le VPN d'OffLok a été coupé dans les réglages d'Android : Android ne fait tourner qu'un VPN à la fois, donc OffLok s'est éteint. Rallume-le pour reprendre la place de cet autre VPN.",
+    "warning.android-lockdown":
+      "« Bloquer les connexions sans VPN » est activé dans Android : le VPN d'OffLok ne transporte que le DNS, donc Android coupe toutes les autres connexions. Désactive ce réglage dans les réglages VPN d'OffLok (le VPN permanent peut rester activé).",
     "warning.settings": "Ouvrir les réglages d'Android",
     "signin.button": "Se connecter à ce réseau",
     "signin.text": "Laisse passer le DNS de ce réseau 5 minutes, le temps d'ouvrir sa page de connexion.",
