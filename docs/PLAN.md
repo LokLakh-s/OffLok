@@ -457,8 +457,9 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
     The repository must let GitHub Actions open pull requests (Settings, Actions, General); when it cannot, an
     issue says so, with the link that opens it;
   - merging it is the approval: once the CI passes on main, the job makes the tag and runs the release workflow
-    (what the workflow's own token does starts no workflow, a dispatch excepted). A version in progress ships the
-    new Unbound with its own release;
+    (what the workflow's own token does starts no workflow, a dispatch excepted), whose publishing job then waits
+    for the maintainer's approval as every release's does (below). A version in progress ships the new Unbound
+    with its own release;
   - GitHub turns a public repository's schedules off after 60 days without activity: the Actions tab's
     "Enable workflow" turns it back on.
 - **The app checks for updates** and offers them. Before installing one, it verifies the signature. The check is
@@ -477,8 +478,10 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   8 hex digits of the SHA-256 of its 32 public bytes). The public key is
   [`packaging/release/offlok-release-45e724ba.pub.pem`](../packaging/release/offlok-release-45e724ba.pub.pem),
   and the app carries it. The private key is the `OFFLOK_RELEASE_KEY` secret of the repository's `release`
-  environment, which only `v*` tags reach, and a copy is kept off GitHub (backed up,
-  encrypted). Each release signs its `SHA256SUMS` into `SHA256SUMS.sig` (64 raw bytes). The app checks the
+  environment, which only `v*` tags reach and whose jobs wait for the maintainer's approval (2026-11-14: a
+  workflow that went wrong, or a tag pushed by anyone else, signs nothing by itself), and a copy is kept off
+  GitHub (backed up, encrypted). Rulesets keep `main` from being deleted or rewritten and a `v*` tag from being
+  moved or deleted (administrators excepted); secret scanning and its push protection are on. Each release signs its `SHA256SUMS` into `SHA256SUMS.sig` (64 raw bytes). The app checks the
   signature, then the file's hash, before installing anything. Anyone can check by hand with OpenSSL 3:
   `openssl pkeyutl -verify -pubin -inkey offlok-release-45e724ba.pub.pem -rawin -in SHA256SUMS -sigfile
   SHA256SUMS.sig`, then `sha256sum -c SHA256SUMS`. The app accepts a list of keys, so a new key can be added in one

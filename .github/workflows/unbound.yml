@@ -4,7 +4,7 @@
 # pinned series (packaging/macos/openssl-update.sh); when one is out, signed, it opens a pull request that pins it,
 # in a new OffLok patch release, and runs on it the workflows of the platforms it changes. Merging the pull request
 # is the maintainer's approval: once the CI passes on main, the release's tag is made here and the release workflow
-# runs on it. Every day too, govulncheck asks Go's vulnerability database about OffLok's code, and opens an issue
+# runs on it (its publishing job waits for the maintainer's approval in the release environment, as every release's). Every day too, govulncheck asks Go's vulnerability database about OffLok's code, and opens an issue
 # when a vulnerability reaches it.
 #
 # What the workflow's own token does starts no other workflow, except a dispatch: the CI and the release are
