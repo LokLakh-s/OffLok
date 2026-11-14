@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/miekg/dns"
@@ -107,6 +108,31 @@ func checkAnswer(r *dns.Msg, requireAD bool) error {
 		return errors.New("answer not DNSSEC-validated")
 	}
 	return nil
+}
+
+// Signed reports whether name's zone is DNSSEC-signed in the public DNS: whether its parent publishes a DS record
+// set for it. addr must be a validating resolver that recurses itself (OffLok's Unbound): a forged denial is then
+// a SERVFAIL, an error here, never a "no".
+func Signed(ctx context.Context, addr netip.AddrPort, name string) (bool, error) {
+	m := new(dns.Msg)
+	m.SetQuestion(dns.Fqdn(name), dns.TypeDS)
+	m.SetEdns0(1232, true)
+	r, _, err := (&dns.Client{Net: "udp", Timeout: timeout}).ExchangeContext(ctx, m, addr.String())
+	if err == nil && r.Truncated {
+		r, _, err = (&dns.Client{Net: "tcp", Timeout: timeout}).ExchangeContext(ctx, m, addr.String())
+	}
+	if err != nil {
+		return false, err
+	}
+	if r.Rcode != dns.RcodeSuccess && r.Rcode != dns.RcodeNameError {
+		return false, fmt.Errorf("answer code %s", dns.RcodeToString[r.Rcode])
+	}
+	for _, rr := range r.Answer {
+		if ds, ok := rr.(*dns.DS); ok && strings.EqualFold(ds.Hdr.Name, dns.Fqdn(name)) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // Lookup returns the IPv4 and IPv6 addresses of name, asked to the resolver at addr.

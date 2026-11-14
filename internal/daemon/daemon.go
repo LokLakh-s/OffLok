@@ -112,6 +112,7 @@ type Daemon struct {
 	netPrint  string
 	network   sysdns.Network
 	ipv6      bool
+	zones     map[string]zoneVerdict // the network's domains, by what the public DNS says of them (zones.go)
 }
 
 // Status is what offlokd reports.
@@ -392,6 +393,10 @@ func (d *Daemon) step(ctx context.Context) {
 			if dec.state == Direct {
 				d.refreshDoT(ctx, s)
 			}
+			// Unbound validates its answers in these states: what it says of the network's domains holds.
+			if (dec.state == Direct || dec.state == FallbackDoT) && d.checkZones(ctx) {
+				d.poke()
+			}
 			return
 		}
 		if !d.rootOK {
@@ -489,7 +494,7 @@ func (d *Daemon) converge(ctx context.Context, s settings.Settings) (decision, e
 		Mode:            dec.mode,
 		Forwarders:      dec.forwarders,
 		NetworkDNS:      d.network.Servers,
-		LocalZones:      append(unbound.PrivateZones(), d.validDomains()...),
+		LocalZones:      append(unbound.PrivateZones(), d.localDomains(dec.mode)...),
 	}
 	conf, err := unbound.Render(cfg)
 	if err != nil {
@@ -516,18 +521,6 @@ func (d *Daemon) converge(ctx context.Context, s settings.Settings) (decision, e
 		d.applied = true
 	}
 	return dec, nil
-}
-
-func (d *Daemon) validDomains() []string {
-	var out []string
-	for _, n := range d.network.Domains {
-		if c, err := unbound.CanonicalName(n); err == nil {
-			out = append(out, c)
-		} else {
-			d.Log.Printf("ignoring the network's domain: %v", err)
-		}
-	}
-	return out
 }
 
 // runUnbound starts Unbound, or reloads it when its configuration changed.
