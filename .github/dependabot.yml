@@ -1,0 +1,34 @@
+# Dependabot's pull requests for OffLok's dependencies, once a week, each ecosystem's in one request; the CI runs on
+# them. Unbound and OpenSSL, which no package manager pins here, have their own daily watch
+# (.github/workflows/unbound.yml), and Go's vulnerability database is asked every day there too.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories: ["/", "/desktop"]
+    schedule:
+      interval: weekly
+    groups:
+      go:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+
+  # The Linux build image: its Go is the CI's and the releases' (go.mod's toolchain line names the same).
+  - package-ecosystem: docker
+    directory: /packaging/linux/desktop-build
+    schedule:
+      interval: weekly
