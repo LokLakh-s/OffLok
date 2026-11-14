@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Privacy — OffLok</title>
+  <meta name="description" content="OffLok's privacy policy: no data collected, what it keeps on your device, what it contacts, and what the VPN is for on Android.">
+  <link rel="canonical" href="https://offlok.org/en/privacy/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OffLok">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:url" content="https://offlok.org/en/privacy/">
+  <meta property="og:title" content="Privacy — OffLok">
+  <meta property="og:image" content="https://offlok.org/img/share-en.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="OffLok: the internet’s address book, at home. Free and open source, no account.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="alternate" hreflang="fr" href="https://offlok.org/confidentialite/">
+  <link rel="alternate" hreflang="en" href="https://offlok.org/en/privacy/">
+  <meta name="theme-color" content="#f4f7f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c1314" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="../../favicon.ico" sizes="48x48">
+  <link rel="icon" href="../../img/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../assets/site.css">
+  <script src="../../assets/site.js" defer></script>
+</head>
+<body>
+<svg width="0" height="0" class="sr-only" aria-hidden="true">
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.3s-8.3-4.9-8.3-11a4.6 4.6 0 0 1 8.3-2.7 4.6 4.6 0 0 1 8.3 2.7c0 6.1-8.3 11-8.3 11z"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+</svg>
+
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href="../" aria-label="OffLok, home">
+      <img src="../../img/offlok-mark-small.png" alt="" width="34" height="34">OffLok
+    </a>
+    <div class="bar-end">
+      <a class="lang" href="../../confidentialite/" hreflang="fr" lang="fr" title="Cette page en français">FR</a>
+      <a class="btn btn-ghost btn-small donate" href="https://liberapay.com/LokLakh/donate" title="Donate on Liberapay"><svg class="icon"><use href="#i-heart"/></svg><span>Donate</span></a>
+      <a class="btn btn-gold btn-small" href="../#download"><svg class="icon"><use href="#i-download"/></svg>Download</a>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="legal wrap">
+  <a class="back" href="../"><svg class="icon"><use href="#i-arrow-left"/></svg>Back to the site</a>
+  <h1>Privacy</h1>
+  <p>Last updated: 14 November 2026. This policy covers the OffLok software on computers (Windows, Mac, Linux) and the Android app, however you installed it.</p>
+
+  <h2>In short</h2>
+  <p><strong>OffLok collects no personal data.</strong> No account, no analytics, no tracker, no advertising. LokLakh, which publishes it, receives nothing from your device: not what you look up, not your address, not how you use it.</p>
+
+  <h2>What OffLok keeps on your device</h2>
+  <p>Its settings (on or off, strict mode, your DNS-over-TLS resolver, the blocking categories, your lists and the sites you trust), the blocking lists it downloaded, the memory of its recent DNS answers and a technical log. That log never holds the name of a site visited. None of it leaves your device, and uninstalling erases it.</p>
+
+  <h2>What OffLok contacts</h2>
+  <ul>
+    <li><strong>The DNS servers in charge of each name</strong> your device looks up: the root, then the registry (.org, .com…), then the site's own servers. Each sees your device's IP address and only the part of the name that concerns it. These queries are not encrypted, like all classic DNS.</li>
+    <li><strong>Your DNS-over-TLS resolver</strong>, if you set one, when the root does not answer; otherwise the DNS of the network you are on, except in strict mode.</li>
+    <li><strong>The authors of the blocking lists you switch on</strong>, once a day, over HTTPS: they see your device's IP address, as for any download.</li>
+    <li><strong>GitHub, once a day, on computers</strong>, to see whether a new version is out: GitHub sees the computer's IP address and that it runs OffLok. A switch turns this check off. On Android, the app stores take care of updates.</li>
+  </ul>
+
+  <h2>On Android: what the VPN is for</h2>
+  <p>Android lets no app become the phone's DNS except through its VPN service. OffLok uses it for one thing only: to receive the phone's DNS queries and answer them <strong>on the phone itself</strong>. The tunnel leads only to OffLok's address and carries only those queries: the rest of your connections do not go through it, and OffLok does not see them. There is no VPN server at the other end: nothing is sent to LokLakh or anyone else.</p>
+
+  <h2>Sharing and selling</h2>
+  <p>No data is sold, rented or shared: LokLakh receives none. If you install OffLok from Google Play or F-Droid, those stores apply their own rules to what they know about you.</p>
+
+  <h2>The offlok.org website</h2>
+  <p>What the website itself and its host know about visitors is described in the <a href="../legal-notice/">legal notice</a>: no cookie, no audience measurement.</p>
+
+  <h2>Contact</h2>
+  <p>OffLok is published by <strong>LokLakh</strong>, sole proprietorship, SIREN 131 033 912 (France). For any question about this policy: <a href="mailto:contact@loklakh.fr">contact@loklakh.fr</a>. OffLok's code is public: anyone can check what it does on <a href="https://github.com/LokLakh-s/OffLok">GitHub</a>.</p>
+</main>
+
+<footer class="site-footer slim">
+  <div class="wrap foot-bottom">
+    <span>© 2026 LokLakh · <a href="../">offlok.org</a></span>
+    <span><a href="../../confidentialite/" hreflang="fr" lang="fr">Confidentialité en français</a></span>
+  </div>
+</footer>
+</body>
+</html>
