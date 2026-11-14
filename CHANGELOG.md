@@ -2,6 +2,25 @@
 
 What changes from one OffLok release to the next. Each release's notes on GitHub start with its section here.
 
+## 0.6.1
+
+- **A network can no longer turn DNSSEC off for names of its choice.** The domains a network declares (its search
+  domains, a connection's DNS suffix) went to its DNS unchecked: one declaring `com` answered every .com name
+  itself. OffLok now asks the public DNS first: a TLD or a signed domain stays OffLok's, DNSSEC-checked; a local one
+  (`fritz.box`, a company's) still goes to the network.
+- **Blocking: the exceptions lists write as `@@||name^|` or `@@|name^|` are read, and `$badfilter`.** They were
+  skipped, so that sites a list lets through on purpose (unsubscribe links, banks) stayed blocked. An exception
+  never unblocks a malicious site but a list of malicious sites' own. Lists come over HTTPS only (or HTTP from your
+  own computer).
+- **macOS:** the menu bar app has the administrator's prompt run only a command no one but root can change (the
+  command moves to `/usr/local/libexec/offlok`, `/usr/local/bin/offlok` links to it); OffLok reads the network
+  settings every 30 seconds instead of 5, which saves the battery.
+- **Windows:** the local channel lets a program that connects and sends nothing go after 30 seconds, and the tray
+  app and the command make sure they talk to OffLok's service.
+- **Releases** build OpenSSL, Unbound and libunbound from their checked sources, never from a cache; Go 1.27.4
+  (GO-2026-6859), golang.org/x/net 0.62.0. Every day, Go's vulnerability database is asked about OffLok's code.
+- `offlokd.log` stays under 1 MB while OffLok runs, not only at its start.
+
 ## 0.6.0
 
 - **macOS**, 13 or later, Apple silicon and Intel: `offlok-0.6.0.pkg` installs offlokd under launchd, Unbound

@@ -2,7 +2,7 @@
 
 OffLok turns your computer into its own DNS resolver. Install it, and your machine looks names up by itself,
 starting from the root servers, instead of asking your internet provider, Google, Cloudflare or Quad9. Free
-software under the MIT licence, for Linux, Windows and macOS first, Android and iOS later.
+software under the MIT licence, for Linux, Windows, macOS and Android, iOS later.
 
 Decisions of the maintainer, 2026-10-29. This file is the reference: when the code and this plan disagree, one of
 them is wrong. Points marked **(to confirm)** are proposals that still wait for the maintainer's answer.
@@ -48,7 +48,7 @@ them is wrong. Points marked **(to confirm)** are proposals that still wait for 
 | Topic | Decision |
 |---|---|
 | Name | **OffLok**, chosen over UnbLok, LokOut and LokUp. On 2026-10-29, every `offlok` domain checked (.com, .org, .net, .app, .dev, .fr) and the `offlok` GitHub account were free |
-| Repository | **`LokLakh-s/OffLok`**, MIT, copyright "LokLakh". **Private during development** (2026-10-29), public afterwards |
+| Repository | **`LokLakh-s/OffLok`**, MIT, copyright "LokLakh". **Private during development** (2026-10-29), **public since 2026-10-30** |
 | Language | Code, commits, README, docs and issues in **English**. The app shows **English or French**, following the system language |
 | Engine | **Unbound** (NLnet Labs, BSD-3-Clause). Hickory DNS, the only fully MIT-compatible candidate, still labels its recursor experimental (0.26.1) |
 | Our code | **Go**: one static binary per OS, cross-compiled, running as a system service |
@@ -65,7 +65,7 @@ them is wrong. Points marked **(to confirm)** are proposals that still wait for 
 | Window | The design reviewed on screenshots and approved (2026-10-29): the state on top (chip, title, one sentence), "Sign in to this network" when strict mode blocks, the on/off switch, then the settings (strict mode, the encrypted fallback resolver, who may change settings). **On Windows, a flyout out of the tray icon** (2026-10-30): no frame, no taskbar button, closed when it loses the focus |
 | Captive portals in strict mode | **"Sign in to this network"** (2026-10-29): the network's DNS for 5 minutes, then strict mode again by itself. **Open to every user**, as pausing (confirmed by the maintainer, 2026-10-29) |
 | Order | **Linux → Windows → macOS**, then mobile |
-| Windows CI | **GitHub's Windows runners** (2026-10-29), on pushes to main only, while the repository is private (its minutes count double); real trials on a Windows PC |
+| Windows CI | **GitHub's Windows runners** (2026-10-29), on pushes to main only while the repository was private (its minutes counted double); since it is public, free, on pull requests too; real trials on a Windows PC |
 | Update source | **GitHub Releases** (2026-10-29): the app checks once a day and installs a new version only after checking OffLok's signature. It contacts GitHub (Microsoft) once a day |
 | Version | OffLok's own semantic versioning, starting at 0.1.0 (it is not part of the shared Lok version counter) |
 | Android | **Google Play, F-Droid and the APK on GitHub** (2026-10-31). The maintainer's Play developer account (`tor@offlok.org`) is going through identity verification. **Google Play without ad blocking, F-Droid and GitHub full** (2026-10-31) |
@@ -105,8 +105,9 @@ offlokd generates the configuration from a template; nobody edits it by hand. Th
 servers. TLD lookups then need no root round trip, and resolution keeps going if the root servers are unreachable
 for a while.
 
-On Linux, OffLok runs its own Unbound unit and never touches the distribution's `unbound.service`. A user who
-already runs their own Unbound keeps it.
+On Linux, Unbound runs as offlokd's child, never as the distribution's `unbound.service`: an untouched one is turned
+off at install and back on at removal, a configured one is someone's resolver and is left alone (see *Per
+platform*).
 
 ### offlokd
 
@@ -114,24 +115,29 @@ already runs their own Unbound keeps it.
   resolver. An IPv6 router advertisement (RDNSS) from the box must not add the provider's resolver next to ours.
 - **Networks.** On every network change, it records the DNS servers and search domains the network or VPN provides,
   then re-probes.
-- **Probe.** It checks that the root servers answer over UDP and TCP port 53.
+- **Probe.** It asks three root servers picked at random for the root zone's SOA over UDP port 53, and wants an
+  authoritative answer (a network that redirects port 53 to its own resolver answers without one).
   - Yes: **direct** (green).
   - No: **fallback** (orange). It uses the personal DoT address if one is set and reachable, otherwise the network's
     DNS, unless strict mode is on. In fallback it retries the root every few minutes, and at once after a network
     change.
-- **Local names** go to the network's DNS:
-  - the network's search domains;
+- **Local names** go to the network's DNS, with DNSSEC validation off for them:
   - `home.arpa`, `.lan`, `.home`, `.internal` and similar;
-  - reverse zones of private address ranges.
+  - reverse zones of private address ranges;
+  - the network's search domains (DHCP, a connection's DNS suffix), **once the public DNS shows them unsigned or
+    absent** (2026-11-14): offlokd asks its own Unbound, validating, for the domain's DS records. A network that
+    declares a TLD or a signed domain (`com`, a bank's) would otherwise answer those names itself, unchecked;
+    signed, the domain stays OffLok's. Not checked yet (the root out of reach), a search domain goes to the
+    network only in the fallback to the network's DNS, where every name does. An unsigned public domain a network
+    declares is still the network's: on the way, it could rewrite that domain's answers anyway.
 
   `.local` belongs to mDNS: OffLok leaves it to the OS.
 - **VPNs.** Domains a VPN declares go to the VPN's DNS (details per OS: *To verify*).
-- **Self-test** after every change:
-  - a name must resolve through `127.0.0.1`;
-  - a validly signed name must come back DNSSEC-validated;
-  - a name with deliberately broken DNSSEC must fail.
-
-  If any of these goes wrong: restore the saved settings, go red, and tell the user.
+- **Self-test** after every change: the root zone's SOA through OffLok's front on `127.0.0.1`, DNSSEC-validated
+  (AD) except in the fallback to the network's DNS. If it fails: restore the saved settings, go red, and tell the
+  user. A name with deliberately broken DNSSEC (`dnssec-failed.org`) is checked by the integration tests of every
+  platform, not by the self-test, which would then depend on someone else's test domain and tell them every user's
+  address.
 - **Off.** "Turn OffLok off" restores the original settings until the user turns it back on. "Pause blocking"
   lasts 10 minutes.
 
@@ -155,8 +161,10 @@ already runs their own Unbound keeps it.
   (`/var/lib/offlok/lists/`), so that blocking works from the start, network or not; a failed download keeps the
   previous copy. They are never shipped in the package. In memory, each list is a sorted, packed set of names
   (about 28 bytes a name). A listed name blocks itself and everything under it; a list's exception (`@@`) lets a
-  name through whatever list blocked it, as AdGuard does. Rules OffLok does not understand (regular expressions,
-  modifiers that narrow a rule) are skipped.
+  name through whatever list blocked it, as AdGuard does, **except a malicious site's**: only a list of malicious
+  sites unblocks one (2026-11-14). `||name^`, `|name^` and `@@` rules ending in `|` are read, and `$badfilter`
+  cancels the same rule; rules OffLok does not understand (regular expressions, modifiers that narrow a rule) are
+  skipped. Lists come over HTTPS only, or over plain HTTP from the machine itself.
 - **"Is this site blocked?"** (`offlok check`, open to everyone): the user types or pastes the site that
   misbehaves; OffLok says which list blocks it.
 - **"Trust this site"** (`offlok trust`, administrators): the site and what is under it are never blocked; its
@@ -184,7 +192,8 @@ already runs their own Unbound keeps it.
 - **GNOME has no tray by default.** Ubuntu ships the AppIndicator extension, and Fedora does not. Without it, the
   window opens from the app launcher.
 - **The command line** `offlok` uses the same channel. It is what the integration tests drive.
-- **IPC:** a Unix socket (Linux, macOS) or a named pipe (Windows), open to every local user. offlokd reads who is
+- **IPC:** a Unix socket (Linux, macOS) or a named pipe (Windows), open to every local user; a request is read up
+  to 64 KiB within 30 seconds, and 32 callers at most are served at once. offlokd reads who is
   calling from the kernel (`SO_PEERCRED`), which the caller cannot forge. Administrator means root for now (`sudo`).
   The tray app sends its requests as interactive, and offlokd then asks polkit (`org.loklakh.offlok.manage`,
   `auth_admin_keep`: the password once, then a few minutes without asking), whose agent in the user's session
@@ -239,11 +248,17 @@ already runs their own Unbound keeps it.
   registry (`DhcpNameServer`, `Dhcpv6DNSServers`) and from the static servers saved.
 - **Service:** `OffLok`, started at boot, run as SYSTEM (`golang.org/x/sys/windows/svc`), restarted 2 seconds
   after a crash by the service manager. Unbound runs in a job object that kills it when offlokd goes. Windows has
-  no SIGHUP: a new configuration restarts Unbound.
+  no SIGHUP: a new configuration restarts Unbound. **Unbound runs as SYSTEM too** (Linux drops it to `unbound`,
+  macOS to `_offlok`): Windows has no account to drop to, and starting it as LocalService needs a launcher of our
+  own, since NLnet Labs' `unbound.exe` imports USER32, which fails to start under another account in the
+  services' window station (seen on 2026-11-14; to do: its own window station and desktop, then LocalService).
 - **Local channel:** the named pipe `\\.\pipe\offlok`, open to signed-in users, closed to the network. offlokd
   reads the caller's token by impersonating it: an administrator is an elevated member of Administrators. The
   tray app, refused, runs the command again through `offlok.exe --raw` elevated, so Windows shows UAC's prompt
-  (polkit's place on Linux).
+  (polkit's place on Linux). The pipe's handles do synchronous I/O, which no deadline reaches: a deadline cancels
+  the read or write under way (`CancelSynchronousIo`). While offlokd is not running, any user may create a pipe of
+  that name: the command and the tray app talk to it only when it belongs to SYSTEM, the administrators or
+  themselves.
 - **OffLok's folder in ProgramData is offlokd's alone.** ProgramData lets every user create folders: a user who
   made `C:\ProgramData\OffLok` (or something in it) first could change what offlokd, as SYSTEM, reads and
   writes there, Unbound's configuration included. At install and at every start, offlokd removes links and
@@ -270,8 +285,8 @@ already runs their own Unbound keeps it.
     none yet may be asked to come back later.
   - What SignPath asks (its terms and documentation, read on 2026-10-30), and where OffLok stands:
     - OSI licence, no proprietary component: yes (MIT; Unbound is BSD-3-Clause).
-    - **Already released, in the form to sign:** not yet, nothing is published.
-    - **Source in a public repository, builds verifiable from it:** not yet, the repository is private.
+    - **Already released, in the form to sign:** yes, since 0.5.0 (2026-10-30).
+    - **Source in a public repository, builds verifiable from it:** yes, public since 2026-10-30.
     - **Every job leading to the signing request runs on GitHub-hosted runners:** the release workflow must build
       on GitHub's machines, not on a self-hosted one.
     - A "Code signing policy" section on the home page and the download page, with the sentence "Free code
@@ -282,8 +297,8 @@ already runs their own Unbound keeps it.
       the lists the user switches on are what the user asked for.
     - **No system change without a proper warning:** the installer must say, before installing, that every
       interface's DNS will point at OffLok, and that uninstalling gives it back.
-    - Product name and version in every signed file (`offlok.exe`, `offlokd.exe`, `offlok-desktop.exe` carry
-      none yet), each release approved by hand in SignPath, multi-factor authentication for the whole team.
+    - Product name and version in every signed file (done: go-winres, at build time), each release approved by
+      hand in SignPath, multi-factor authentication for the whole team.
 - **Tests:** a `windows-2025` machine of GitHub's in CI (`test/windows/test.ps1`: silent install, service, system
   DNS, DNSSEC, blocking, the tray app starting, silent uninstall, every interface's DNS as before), the Go tests on
   Windows (the named pipe included), then a real PC for Wi-Fi, VPNs and captive portals. arm64 builds
@@ -293,7 +308,9 @@ already runs their own Unbound keeps it.
 
 - **Unsigned `.pkg` first** (0.6.0; the maintainer chose ".pkg, then Homebrew", 2026-10-30, and to ship it unsigned,
   2026-10-31): OffLok.app in the menu bar (LSUIElement, started at every login by a LaunchAgent), offlokd under
-  launchd (`org.loklakh.offlokd`), the `offlok` command, and **Unbound built by us** from NLnet Labs' source with
+  launchd (`org.loklakh.offlokd`), the `offlok` command (in `/usr/local/libexec/offlok`, root's alone, linked from
+  `/usr/local/bin`, which Homebrew makes its user's on Intel Macs: the menu bar app has macOS's prompt run only a
+  command no one but root can change), and **Unbound built by us** from NLnet Labs' source with
   OpenSSL 3.5 linked in, one program for Apple silicon and Intel, macOS 13 or later (Go 1.27's own minimum). Both
   sources are pinned with their SHA-256 after their signatures are checked (`packaging/macos/sources.env`), and the
   daily watch proposes their security fixes. Unbound drops to a hidden `_offlok` account. The site gives the steps
@@ -452,8 +469,10 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   workflow on GitHub's runners, the code signing policy, the installer's warnings), the repository went public
   under `LokLakh-s` with release 0.5.0 (2026-10-30). The SignPath application follows, sent by the maintainer.
 - **Update source:** GitHub Releases (decided 2026-10-29).
-- **Release files:** `SHA256SUMS` and a build provenance attestation. GitHub Actions are pinned by SHA, Dependabot
-  is on, and Go builds use `-trimpath`.
+- **Release files:** `SHA256SUMS` and a build provenance attestation. GitHub Actions are pinned by SHA, Go builds
+  use `-trimpath` and the Go of go.mod's `toolchain` line (the Linux build image's too). Dependabot proposes new
+  versions of the Go modules, Actions, Gradle and the build image once a week; every day, the watch asks Go's
+  vulnerability database about OffLok's code (govulncheck) and opens an issue when a vulnerability reaches it.
 - **Release key** (created 2026-10-30, with the maintainer's agreement): Ed25519, key ID `45e724ba` (the first
   8 hex digits of the SHA-256 of its 32 public bytes). The public key is
   [`packaging/release/offlok-release-45e724ba.pub.pem`](../packaging/release/offlok-release-45e724ba.pub.pem),
@@ -479,10 +498,11 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
     read their releases from `$OFFLOK_UPDATE_BASE`: the update tests (`test/integration/update.sh`,
     `test/windows/update.ps1`) serve made-up releases. Released builds do neither.
 - **Releases** (`.github/workflows/release.yml`): a tag `v<VERSION>` checks that the CI passed on its commit, or on
-  an earlier one with nothing since that the CI tests (`packaging/release/untouched.py` reads its `paths`), builds
-  the packages and the installer on GitHub's machines, tests them on Windows, macOS and an Android emulator, then
-  publishes them with `SHA256SUMS`, its signature, the
-  public key and, once the repository is public, a build provenance attestation. The notes are the version's
+  an earlier one with nothing since that the CI tests (`packaging/release/untouched.py` reads its `paths`; a pull
+  request's run does not count), builds the packages and the installer on GitHub's machines, nothing compiled from
+  a cache (OpenSSL, Unbound and libunbound from their checked sources), tests them on Windows, macOS and an Android
+  emulator, then publishes them with `SHA256SUMS`, its signature, the public key and a build provenance
+  attestation. The notes are the version's
   section of `CHANGELOG.md` (`packaging/release/notes.sh`). Run by hand on a branch, the workflow is a rehearsal
   that publishes nothing.
 
@@ -518,7 +538,8 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
   Those before, `LokLakh <contact@loklakh.fr>`, link to the same account once that address is verified on it.
 - **CI:** GitHub-hosted runners on Linux, Windows and macOS, and an Android emulator. They run the unit tests, the
   integration tests in containers, and an install → resolve → update → uninstall → original-settings-restored test
-  on each platform. A push to main starts only the workflows of the platforms it changes (each workflow's `paths`):
+  on each platform. A push to main or a pull request starts only the workflows of the platforms it changes (each
+  workflow's `paths`):
   the Go core, the window and VERSION start all of them; documentation, the website, the store texts and the release
   scripts none; the release tests everything again.
 
@@ -566,7 +587,12 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 - **Android:** whether F-Droid's build server builds Go, OpenSSL and Unbound for the NDK, and byte for byte the
   same APK as ours.
 - **Android:** the battery a resolver running all day costs.
+- **Android:** whether "Always-on VPN" with "Block connections without VPN" cuts every connection that does not go
+  through OffLok's tunnel, which carries DNS only; the window should then say so (`VpnService.isLockdownEnabled`).
 - **VPNs:** a full-tunnel VPN that declares no domain. Should its DNS take over, or should recursion stay?
+- **Search domains on Linux:** systemd-resolved itself sends the names of a link's search domains to that link's DNS
+  (its routing rules), before OffLok sees them: OffLok's check of the network's domains does not cover that. And on
+  every system, the local names of all networks (Wi-Fi, a VPN) go to all their DNS servers at once.
 - **Local root zone:** which sources allow transfers today, and whether to verify the zone with ZONEMD.
 - **Blocklists:** which lists, their licences, formats and sizes, and Unbound's memory use with them.
 - **Self-test:** a stable test name with deliberately broken DNSSEC.
@@ -577,5 +603,5 @@ docs/                 this plan, ROADMAP.md; CHANGELOG.md and the README's code 
 
 - **To confirm:** nothing at the moment.
 - **The name:** the maintainer reserved the GitHub organisation `OffLok` (2026-10-30), empty: the project stays
-  `LokLakh-s/OffLok` for now. No domain: nothing needs one (`offlok.org` and `offlok.com` were free on
-  2026-10-30).
+  `LokLakh-s/OffLok` for now. The domain `offlok.org` (2026-10-30) serves the website, on GitHub Pages, and the
+  project's mail; OffLok itself needs none.

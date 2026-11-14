@@ -527,7 +527,7 @@ sha256sum --ignore-missing -c SHA256SUMS</pre><button type="button" class="copy"
       <div class="faq">
         <details>
           <summary>Could it break my internet?<svg class="icon"><use href="#i-plus"/></svg></summary>
-          <div class="answer"><p>No. Every change is tested; at the slightest failure, OffLok puts your original settings back by itself and tries again a minute later. Turning it off or uninstalling it leaves your computer exactly as before.</p></div>
+          <div class="answer"><p>No. Every change is tested; at the slightest failure, OffLok puts your original settings back by itself and tries again a minute later. The one exception, if you choose it: in strict mode, it never goes back to the network's DNS, even when something fails. Turning it off or uninstalling it leaves your computer exactly as before.</p></div>
         </details>
         <details>
           <summary>Does it slow down my connection?<svg class="icon"><use href="#i-plus"/></svg></summary>
@@ -543,7 +543,7 @@ sha256sum --ignore-missing -c SHA256SUMS</pre><button type="button" class="copy"
         </details>
         <details>
           <summary>Does it block sites?<svg class="icon"><use href="#i-plus"/></svg></summary>
-          <div class="answer"><p>If you want. Blocking is included but off at first, with three switches: trackers, malicious sites (phishing, scams) and your own lists. The lists come from their authors (HaGeZi, URLhaus and others), downloaded once a day by your computer.</p><p>A site stopped working? “Check” tells you whether it is blocked and by which list, and “Trust this site” unblocks it for good.</p></div>
+          <div class="answer"><p>If you want. Blocking is included but off at first, with three switches: trackers, malicious sites (phishing, scams) and your own lists. The lists come from their authors (HaGeZi, URLhaus and others), downloaded once a day by your computer, over HTTPS.</p><p>A site stopped working? “Check” tells you whether it is blocked and by which list, and “Trust this site” unblocks it for good.</p></div>
         </details>
         <details>
           <summary>It's free? What's the catch?<svg class="icon"><use href="#i-plus"/></svg></summary>

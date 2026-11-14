@@ -29,6 +29,10 @@ Google, Cloudflare or Quad9 in between. Free software under the MIT licence.
 | grey: `Off` | the system has its original DNS back |
 | red: `Error` | something failed: the original DNS is given back (except in strict mode) and OffLok tries again a minute later |
 
+Local names (your box's, a company network's) still go to the network's DNS: the private zones (`.lan`,
+`home.arpa`...) and the network's own domains, once the public DNS shows them unsigned. A network that claims a
+TLD or a signed domain (`com`, a bank's) does not get those names: they stay OffLok's, DNSSEC-checked.
+
 OffLok never breaks your internet on purpose: every change is self-tested, a failure gives the original DNS
 back, and stopping or uninstalling restores the system exactly as it was. Unbound only listens on `127.0.0.1` and
 `::1`. Nothing is logged, and what OffLok contacts is listed under [Privacy](#privacy).
@@ -70,7 +74,8 @@ sudo offlok list add https://example.org/list.txt
 ```
 
 The lists (ShadowWhisperer, HaGeZi, URLhaus and others, each under its own licence) are downloaded by your
-computer once a day, only for the categories switched on; OffLok never ships them.
+computer once a day, over HTTPS, only for the categories switched on; OffLok never ships them. A list you add must
+be an `https://` address too (or `http://` from your own computer).
 
 The command and the window speak English or French, following the system language. On a desktop, the
 `offlok-desktop` package adds the tray icon (a dot when OffLok falls back or fails, grey when off) and its window;

@@ -95,11 +95,26 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
       tunnel's UDP queries answered by the front; tested on Linux against Debian's libunbound
 - [x] libunbound and OpenSSL built with the NDK for arm64, armv7 and x86_64; the core bound with gomobile, a full
       library and Google Play's without the ad category
-- [x] The app: a foreground `VpnService`, the computers' window in a WebView, a Quick Settings tile, the Private DNS
+- [x] The app: a `VpnService` with no notification (the app binds it, then Android), the computers' window in a WebView, a Quick Settings tile, the Private DNS
       and other-VPN warnings; built in the full and Google Play flavours (the latter checked to carry no ad list)
 - [x] Emulator tests on GitHub's runners (Android 14): the VPN, resolution through it, DNSSEC, blocking, off
 - [ ] Emulator tests of the root cut off and strict mode; real phones; the battery a day costs
 - [ ] One release key; the APK on GitHub Releases; F-Droid (reproducible build) and IzzyOnDroid; Google Play
+
+## Hardening (0.6.1, after the audit of 2026-11-14)
+
+- [x] A network's search domains go to its DNS only once the public DNS shows them unsigned or absent: a TLD or a
+      signed domain declared by a hostile network stays OffLok's, DNSSEC-checked
+- [x] Blocking lists: the AdGuard DNS filter's exceptions read (`||name^|`, `|name^|`) and `$badfilter`; no
+      exception lifts a malicious site but a malicious list's; lists over HTTPS (or HTTP from the machine itself)
+- [x] Local channel: requests bounded in size and number, real deadlines on Windows's pipe, the pipe's owner checked
+- [x] macOS: the command the menu bar app runs as root is root's alone; no Unbound from Homebrew's folders; the
+      network services read every 30 seconds instead of 5
+- [x] Releases build OpenSSL, Unbound and libunbound from their sources, never from a cache; Go 1.27.4 everywhere
+- [x] The CI on pull requests; govulncheck every day; Dependabot once a week
+- [x] offlokd.log capped while offlokd runs; the settings synced to disk before they replace the old ones
+- [ ] Windows: Unbound as LocalService (NLnet Labs' `unbound.exe` imports USER32: a window station of its own first)
+- [ ] Android: what "Block connections without VPN" does to a VPN that carries DNS only, and a warning if need be
 
 ## 8. Later
 
