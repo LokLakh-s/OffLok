@@ -113,7 +113,9 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 - [x] Releases build OpenSSL, Unbound and libunbound from their sources, never from a cache; Go 1.27.4 everywhere
 - [x] The CI on pull requests; govulncheck every day; Dependabot once a week
 - [x] offlokd.log capped while offlokd runs; the settings synced to disk before they replace the old ones
-- [ ] Windows: Unbound as LocalService (NLnet Labs' `unbound.exe` imports USER32: a window station of its own first)
+- [x] Windows: Unbound as LocalService (its token, LocalService's own window station: `unbound.exe` imports USER32);
+      the fallback to a DNS-over-TLS resolver tested behind the firewall
+- [x] offlok.org: a privacy policy, in French and English (Google Play asks for one)
 - [ ] Android: what "Block connections without VPN" does to a VPN that carries DNS only, and a warning if need be
 
 ## 8. Later

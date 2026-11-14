@@ -2,6 +2,14 @@
 
 What changes from one OffLok release to the next. Each release's notes on GitHub start with its section here.
 
+## 0.6.2
+
+- **Windows: Unbound runs as LocalService, no longer as SYSTEM.** It reads what any server on the internet sends: a
+  flaw in it now gives no one control of the computer, as on Linux and macOS, where it runs under an account of its
+  own. Should Windows refuse, it runs as before, and OffLok's log says so.
+- **offlok.org:** a privacy policy, in French and English: OffLok collects no personal data; what it keeps on your
+  device, what it contacts, and what the VPN is for on Android.
+
 ## 0.6.1
 
 - **A network can no longer turn DNSSEC off for names of its choice.** The domains a network declares (its search

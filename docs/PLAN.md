@@ -248,10 +248,16 @@ platform*).
   registry (`DhcpNameServer`, `Dhcpv6DNSServers`) and from the static servers saved.
 - **Service:** `OffLok`, started at boot, run as SYSTEM (`golang.org/x/sys/windows/svc`), restarted 2 seconds
   after a crash by the service manager. Unbound runs in a job object that kills it when offlokd goes. Windows has
-  no SIGHUP: a new configuration restarts Unbound. **Unbound runs as SYSTEM too** (Linux drops it to `unbound`,
-  macOS to `_offlok`): Windows has no account to drop to, and starting it as LocalService needs a launcher of our
-  own, since NLnet Labs' `unbound.exe` imports USER32, which fails to start under another account in the
-  services' window station (seen on 2026-11-14; to do: its own window station and desktop, then LocalService).
+  no SIGHUP: a new configuration restarts Unbound. **Unbound runs as LocalService** (2026-11-14; Linux drops it to
+  `unbound`, macOS to `_offlok`), not as SYSTEM: a flaw in Unbound, which reads what any server on the internet
+  sends, gives no one SYSTEM. offlokd logs on as LocalService (`LogonUser`) and starts Unbound with that token,
+  suspended until it is in the job, with the desktop `""`: NLnet Labs' `unbound.exe` imports USER32, which fails
+  to start in SYSTEM's window station, and `""` has Windows connect it to LocalService's own, as for a service that
+  runs as LocalService. Its log comes through a pipe, the only handle it inherits. LocalService may read OffLok's
+  folder, run Unbound's program and change the keys folder (the start's clean-up keeps the files it owns there).
+  Windows refusing (no logon, USER32 failing at once), Unbound runs as SYSTEM, and the log says so: a resolver that
+  does not start would break the internet. The Windows test checks the account, the trust anchor rewritten, and
+  the fallback to a DNS-over-TLS resolver behind the firewall (Unbound checking its certificate, as LocalService).
 - **Local channel:** the named pipe `\\.\pipe\offlok`, open to signed-in users, closed to the network. offlokd
   reads the caller's token by impersonating it: an administrator is an elevated member of Administrators. The
   tray app, refused, runs the command again through `offlok.exe --raw` elevated, so Windows shows UAC's prompt
