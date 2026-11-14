@@ -3,6 +3,9 @@ package blocklist
 import (
 	"fmt"
 	"hash/fnv"
+	"net"
+	"net/url"
+	"strings"
 )
 
 // Category is a kind of blocking, switched on and off by itself.
@@ -55,4 +58,25 @@ func CustomSource(url string) Source {
 	h := fnv.New64a()
 	h.Write([]byte(url))
 	return Source{ID: fmt.Sprintf("custom-%016x", h.Sum64()), Name: url, URL: url}
+}
+
+// SafeURL reports whether a list may be downloaded from raw: over HTTPS, or over plain HTTP from this machine itself
+// (a list the user serves locally). Plain HTTP across a network lets anyone on the way rewrite the list.
+func SafeURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "https":
+		return true
+	case "http":
+		host := u.Hostname()
+		if strings.EqualFold(host, "localhost") {
+			return true
+		}
+		ip := net.ParseIP(host)
+		return ip != nil && ip.IsLoopback()
+	}
+	return false
 }

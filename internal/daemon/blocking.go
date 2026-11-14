@@ -205,12 +205,14 @@ func (d *Daemon) SetBlock(value string) error {
 func (d *Daemon) CustomList(value string) error {
 	verb, raw, _ := strings.Cut(strings.TrimSpace(value), " ")
 	raw = strings.TrimSpace(raw)
-	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+	if _, err := url.Parse(raw); err != nil || raw == "" {
 		return fmt.Errorf("%q is not the address of a list (https://…)", raw)
 	}
 	switch verb {
 	case "add":
+		if !blocklist.SafeURL(raw) {
+			return fmt.Errorf("%q is not the address of a list (https://…)", raw)
+		}
 		return d.Update(func(s *settings.Settings) error {
 			if !slices.Contains(s.CustomLists, raw) {
 				s.CustomLists = append(s.CustomLists, raw)

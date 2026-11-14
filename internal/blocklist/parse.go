@@ -3,6 +3,7 @@ package blocklist
 import (
 	"bufio"
 	"io"
+	"slices"
 	"strings"
 )
 
@@ -14,10 +15,12 @@ type Parsed struct {
 	Skipped int // rules OffLok does not understand (regular expressions, modifiers that narrow a rule)
 }
 
-// Parse reads a list in the AdBlock DNS syntax (||example.org^, @@||example.org^), the hosts syntax
-// (0.0.0.0 example.org) or one domain per line, and comments in any of them.
+// Parse reads a list in the AdBlock DNS syntax (||example.org^, @@||example.org^|, |example.org^ and
+// $badfilter, which cancels the same rule without it), the hosts syntax (0.0.0.0 example.org) or one domain per
+// line, and comments in any of them.
 func Parse(r io.Reader) (Parsed, error) {
 	var p Parsed
+	cancelled := map[string]bool{} // "@@name" or "name": rules a $badfilter cancels
 	s := bufio.NewScanner(r)
 	s.Buffer(make([]byte, 64*1024), 1024*1024)
 	for s.Scan() {
@@ -30,13 +33,17 @@ func Parse(r io.Reader) (Parsed, error) {
 		}
 		switch {
 		case strings.HasPrefix(line, "@@"):
-			if name, ok := adblock(line[2:]); ok {
+			if name, bad, ok := adblock(line[2:]); ok && bad {
+				cancelled["@@"+name] = true
+			} else if ok {
 				p.Allow = append(p.Allow, name)
 			} else {
 				p.Skipped++
 			}
-		case strings.HasPrefix(line, "||"):
-			if name, ok := adblock(line); ok {
+		case strings.HasPrefix(line, "|"):
+			if name, bad, ok := adblock(line); ok && bad {
+				cancelled[name] = true
+			} else if ok {
 				p.Block = append(p.Block, name)
 			} else {
 				p.Skipped++
@@ -49,24 +56,38 @@ func Parse(r io.Reader) (Parsed, error) {
 			p.Block = append(p.Block, names...)
 		}
 	}
+	if len(cancelled) > 0 {
+		p.Block = slices.DeleteFunc(p.Block, func(n string) bool { return cancelled[n] })
+		p.Allow = slices.DeleteFunc(p.Allow, func(n string) bool { return cancelled["@@"+n] })
+	}
 	return p, s.Err()
 }
 
-// adblock reads ||name^ with no modifier but $important (which only orders rules, irrelevant here).
-func adblock(rule string) (string, bool) {
+// adblock reads ||name^ (the name and what is under it) and |name^ (the name itself, which OffLok widens to what is
+// under it too), either followed by | (the end of the address), with no modifier but $important (which only orders
+// rules, irrelevant here) or $badfilter (bad: the rule cancels the same one without it).
+func adblock(rule string) (name string, bad, ok bool) {
 	rule, mods, _ := strings.Cut(rule, "$")
-	if mods != "" && mods != "important" {
-		return "", false
+	switch mods {
+	case "", "important":
+	case "badfilter":
+		bad = true
+	default:
+		return "", false, false
 	}
-	name, ok := strings.CutPrefix(rule, "||")
+	name, ok = strings.CutPrefix(rule, "||")
 	if !ok {
-		return "", false
+		name, ok = strings.CutPrefix(rule, "|")
 	}
+	if !ok {
+		return "", false, false
+	}
+	name = strings.TrimSuffix(name, "|")
 	name, ok = strings.CutSuffix(name, "^")
 	if !ok || !ValidName(name) {
-		return "", false
+		return "", false, false
 	}
-	return name, true
+	return name, bad, true
 }
 
 var hostsAddrs = map[string]bool{"0.0.0.0": true, "127.0.0.1": true, "::": true, "::1": true, "0": true}

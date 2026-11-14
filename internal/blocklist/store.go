@@ -165,6 +165,9 @@ func (s *Store) Refresh(ctx context.Context, sel []Selected) error {
 }
 
 func (s *Store) fetch(ctx context.Context, src Source, m Meta) (Meta, error) {
+	if !SafeURL(src.URL) {
+		return m, errors.New("not an https:// address: anyone on the way could rewrite the list")
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src.URL, nil)
 	if err != nil {
 		return m, err
@@ -250,21 +253,29 @@ func (s *Store) Load(sel []Selected) error {
 }
 
 // Lookup reports whether a list blocks name, and which one. A list's exception (@@) allows the name again, whatever
-// list blocked it, as AdGuard does.
+// list blocked it, as AdGuard does, except a malicious site's: only a list of malicious sites unblocks one (an ad
+// list's exception, there to unbreak a site, must not let a phishing page through).
 func (s *Store) Lookup(name string) (Match, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, l := range s.active {
-		if l.allow.Covers(name) != "" {
-			return Match{}, false
+		e := l.block.Covers(name)
+		if e == "" || s.allowed(name, l.Category) {
+			continue
 		}
-	}
-	for _, l := range s.active {
-		if e := l.block.Covers(name); e != "" {
-			return Match{Category: l.Category, Source: l.Source.Name, Entry: e}, true
-		}
+		return Match{Category: l.Category, Source: l.Source.Name, Entry: e}, true
 	}
 	return Match{}, false
+}
+
+// allowed reports whether an exception lets name through a block of category c. The caller holds s.mu.
+func (s *Store) allowed(name string, c Category) bool {
+	for _, l := range s.active {
+		if (c != Malicious || l.Category == Malicious) && l.allow.Covers(name) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // SourceInfo is one active source, as the status shows it.

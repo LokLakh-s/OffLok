@@ -73,3 +73,72 @@ func TestValidName(t *testing.T) {
 		}
 	}
 }
+
+// The forms the AdGuard DNS filter uses for most of its exceptions, and $badfilter (checked on its 14/11/2026
+// version: 205 of its 216 exceptions were skipped before).
+func TestParseAdGuardForms(t *testing.T) {
+	list := `||unsub.example.com^
+@@||unsub.example.com^|
+||api.example.net^
+@@|api.example.net^|
+||cancelled.example^
+||cancelled.example^$badfilter
+@@||kept-blocked.example^
+@@||kept-blocked.example^$badfilter
+||kept-blocked.example^
+|exact.example.org^
+||no-caret.example
+`
+	p, err := Parse(strings.NewReader(list))
+	if err != nil {
+		t.Fatal(err)
+	}
+	slices.Sort(p.Block)
+	slices.Sort(p.Allow)
+	if want := []string{"api.example.net", "exact.example.org", "kept-blocked.example", "unsub.example.com"}; !slices.Equal(p.Block, want) {
+		t.Errorf("Block = %v, want %v", p.Block, want)
+	}
+	if want := []string{"api.example.net", "unsub.example.com"}; !slices.Equal(p.Allow, want) {
+		t.Errorf("Allow = %v, want %v", p.Allow, want)
+	}
+	if p.Skipped != 1 { // ||no-caret.example
+		t.Errorf("Skipped = %d", p.Skipped)
+	}
+}
+
+func TestExceptionsNeverLiftMalicious(t *testing.T) {
+	s := &Store{}
+	s.active = []loaded{
+		{Selected: Selected{Category: Ads, Source: Source{Name: "ads"}}, block: NewSet([]string{"cdn.example"}),
+			allow: NewSet([]string{"site.example", "unbreak.cdn.example"})},
+		{Selected: Selected{Category: Trackers, Source: Source{Name: "trackers"}}, block: NewSet([]string{"site.example"}), allow: NewSet(nil)},
+		{Selected: Selected{Category: Malicious, Source: Source{Name: "phishing"}}, block: NewSet([]string{"login.site.example"}),
+			allow: NewSet([]string{"safe.login.site.example"})},
+	}
+	for name, want := range map[string]string{
+		"cdn.example":             "ads",
+		"unbreak.cdn.example":     "", // the ad list's own exception
+		"www.site.example":        "", // an ad list's exception unbreaks a tracker list's block, as AdGuard does
+		"login.site.example":      "phishing",
+		"x.login.site.example":    "phishing", // but never a malicious site's
+		"safe.login.site.example": "",         // a list of malicious sites may
+	} {
+		m, ok := s.Lookup(name)
+		if got := map[bool]string{true: m.Source}[ok]; got != want {
+			t.Errorf("Lookup(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+func TestSafeURL(t *testing.T) {
+	for raw, want := range map[string]bool{
+		"https://lists.example.org/a.txt": true, "HTTPS://lists.example.org/a.txt": true,
+		"http://127.0.0.1:8099/l.txt": true, "http://[::1]/l.txt": true, "http://localhost/l.txt": true,
+		"http://lists.example.org/a.txt": false, "http://192.168.1.10/l.txt": false, "ftp://x.example/l": false,
+		"file:///etc/passwd": false, "https://": false, "not a url": false,
+	} {
+		if got := SafeURL(raw); got != want {
+			t.Errorf("SafeURL(%q) = %v, want %v", raw, got, want)
+		}
+	}
+}
