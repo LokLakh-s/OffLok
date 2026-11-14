@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"slices"
 	"strings"
+	"time"
 )
 
 // Network is what the network (DHCP, router advertisements, a VPN) provides for DNS.
@@ -42,6 +43,13 @@ type Fingerprinter interface {
 // query around OffLok, or another VPN app that took OffLok's place.
 type Warner interface {
 	Warning() string
+}
+
+// Paced is a backend whose reads cost more than offlokd's tick is worth (macOS runs networksetup and scutil, a
+// process each): offlokd reads the network and checks its setting again only that often, or at once when the
+// machine's interfaces change.
+type Paced interface {
+	CheckEvery() time.Duration
 }
 
 // Flusher is a backend whose resolver keeps a cache of its own (systemd-resolved): emptied when the blocking

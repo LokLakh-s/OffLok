@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
 // MacOS sets the DNS of every network service (Wi-Fi, Ethernet, a USB adapter…) with networksetup, as System
@@ -25,6 +26,10 @@ type MacOS struct {
 type macState map[string][]netip.Addr
 
 func (*MacOS) Name() string { return "macOS network services" }
+
+// CheckEvery: each read runs networksetup once per network service and scutil twice; every 5 seconds, that came to
+// some hundred thousand processes a day on a laptop.
+func (*MacOS) CheckEvery() time.Duration { return 30 * time.Second }
 
 func networksetup(args ...string) (string, error) {
 	out, err := exec.Command("/usr/sbin/networksetup", args...).CombinedOutput()

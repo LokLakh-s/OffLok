@@ -113,6 +113,8 @@ type Daemon struct {
 	network   sysdns.Network
 	ipv6      bool
 	zones     map[string]zoneVerdict // the network's domains, by what the public DNS says of them (zones.go)
+	sysRead   time.Time              // when the backend was last read (sysdns.Paced)
+	sysDue    bool                   // this step reads the backend: a paced one is not read at every step
 }
 
 // Status is what offlokd reports.
@@ -411,15 +413,23 @@ func (d *Daemon) step(ctx context.Context) {
 
 // observe reads the network and probes the root (and the personal DoT resolver) when due.
 func (d *Daemon) observe(ctx context.Context, s settings.Settings) {
-	network, err := d.Backend.Network()
-	if err != nil {
-		d.Log.Printf("read the network's DNS: %v", err)
-		network = d.network
-	}
-	network = usable(network)
 	fp := netinfo.Fingerprint()
 	if f, ok := d.Backend.(sysdns.Fingerprinter); ok {
 		fp = f.Fingerprint()
+	}
+	d.sysDue = true
+	if p, ok := d.Backend.(sysdns.Paced); ok && fp == d.netPrint && time.Since(d.sysRead) < p.CheckEvery() {
+		d.sysDue = false
+	}
+	network := d.network
+	if d.sysDue {
+		d.sysRead = time.Now()
+		n, err := d.Backend.Network()
+		if err != nil {
+			d.Log.Printf("read the network's DNS: %v", err)
+		} else {
+			network = usable(n)
+		}
 	}
 	ipv6 := netinfo.HasIPv6Route()
 	changed := fp != d.netPrint || !network.Equal(d.network) || ipv6 != d.ipv6
@@ -514,7 +524,10 @@ func (d *Daemon) converge(ctx context.Context, s settings.Settings) (decision, e
 	if !d.applied {
 		d.Log.Printf("pointing the system DNS (%s) at %v", d.Backend.Name(), listen)
 	}
-	if ok, err := d.Backend.Applied(listen); err != nil || !ok || !d.applied {
+	if !d.applied || d.sysDue {
+		if ok, err := d.Backend.Applied(listen); err == nil && ok && d.applied {
+			return dec, nil
+		}
 		if err := d.Backend.Apply(listen); err != nil {
 			return dec, coded("system-dns", fmt.Errorf("set the system DNS: %w", err))
 		}
