@@ -394,7 +394,9 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
   asks the user itself (`requestAddTileService`); before, the window gives the three gestures. The app knows the
   tile is there when Android adds it or listens to it. Android's "Always-on VPN" setting starts it at boot.
 - **What only a phone needs.**
-  - Android asks once for the VPN permission, the first time OffLok is turned on.
+  - Android asks once for the VPN permission, the first time OffLok is turned on. Before it, the window says what
+    the VPN does and the user accepts or says "Not now" (Google Play's prominent disclosure, in every version,
+    decided 2026-11-16): until then the app answers "on" with `disclosure`, and the tile opens the window.
   - A Private DNS hostname set in Android's settings sends every query to that server, around any VPN: the window
     says so, with a button to the setting.
   - Android runs one VPN at a time: turning another VPN app on turns OffLok off (it never takes the VPN back by
@@ -427,8 +429,11 @@ that answers DNS for the whole phone does it through a **local VPN** (`VpnServic
     merge request to `fdroiddata` with the build recipe (NDK, Go, OpenSSL and Unbound built from source). Its
     volunteers review it with no announced delay; the app appears 24 to 48 hours after the merge. IzzyOnDroid,
     which takes the APK from GitHub, in the meantime.
-  - **Google Play:** an `.aab`, the VpnService declaration with an in-app disclosure, the Data safety form ("no
-    data collected"), a privacy policy on offlok.org. A personal account created after 13 November 2023 first runs
+  - **Google Play:** an `.aab`, the VpnService declaration with an in-app disclosure (0.6.4) and two videos of 90
+    seconds at most (the VPN in use; the disclosure, accepted then declined), the Data safety form ("no data
+    collected", as RethinkDNS declares), a privacy policy on offlok.org. The VPN is not the core function: the
+    permitted one is "Network-related tools". Play App Signing gets OffLok's own key ("Provide a copy of your app
+    signing key") before the first upload. A personal account created after 13 November 2023 first runs
     a closed test with 12 testers for 14 days. Play's VpnService policy lists no DNS use, and says that "any
     manipulation of ads that can impact monetization will result in rejection": **the Play version has no ad
     blocking** (decided 2026-10-31): no "Ads" switch, no ad list. Trackers, malicious sites and the user's own lists

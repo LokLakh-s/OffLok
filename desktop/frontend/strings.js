@@ -47,6 +47,14 @@ export const strings = {
     "tile.add": "Add the tile",
     "tile.later": "No thanks",
     "tile.ok": "Got it",
+    "disclosure.title": "Before OffLok turns on",
+    "disclosure.vpn":
+      "To answer your phone's DNS, OffLok uses Android's VPN service. This VPN stays on your phone: it only receives your apps' DNS queries, that is, the names of the sites and services they look up.",
+    "disclosure.resolve":
+      "OffLok finds each address itself, by asking the servers in charge of each name (the root, then “.org”, then the site), or your network's DNS when they are out of reach. It records none of these names and sends nothing to us. Your other connections do not go through OffLok.",
+    "disclosure.next": "Android then asks you to allow OffLok's VPN.",
+    "disclosure.later": "Not now",
+    "disclosure.accept": "I accept",
     "settings.title": "Settings",
     "strict.label": "Strict mode",
     "strict.text": "Never use the network's DNS, even when the root servers do not answer.",
@@ -160,6 +168,14 @@ export const strings = {
     "tile.add": "Ajouter la vignette",
     "tile.later": "Non merci",
     "tile.ok": "Compris",
+    "disclosure.title": "Avant d'allumer OffLok",
+    "disclosure.vpn":
+      "Pour répondre au DNS du téléphone, OffLok utilise le service VPN d'Android. Ce VPN reste sur ton téléphone : il ne reçoit que les requêtes DNS de tes applis, c'est-à-dire les noms des sites et services qu'elles cherchent.",
+    "disclosure.resolve":
+      "OffLok trouve chaque adresse lui-même, en demandant aux serveurs chargés de chaque nom (la racine, puis « .org », puis le site), ou au DNS de ton réseau quand ils sont injoignables. Il n'enregistre aucun de ces noms et ne nous envoie rien. Tes autres connexions ne passent pas par OffLok.",
+    "disclosure.next": "Android te demande ensuite d'autoriser le VPN d'OffLok.",
+    "disclosure.later": "Pas maintenant",
+    "disclosure.accept": "J'accepte",
     "settings.title": "Réglages",
     "strict.label": "Mode strict",
     "strict.text": "Ne jamais passer par le DNS du réseau, même quand les serveurs racine ne répondent pas.",

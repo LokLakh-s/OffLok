@@ -4,6 +4,9 @@ import { setPlatform, t } from "./strings.js";
 import { api } from "./api.js";
 
 const $ = (s) => document.querySelector(s);
+// Android: until the user accepts what this says about OffLok's VPN (Google Play's prominent disclosure), the app
+// answers "on" with disclosure; accepting turns OffLok on, and Android then asks for its permission.
+const disclosure = $(".disclosure");
 
 const tones = {
   direct: "teal",
@@ -200,6 +203,7 @@ async function act(cmd, value) {
     showError(null);
     render(await api.send(cmd, value));
   } catch (err) {
+    if (err.disclosure) return disclosure.showModal();
     showError(err);
     refresh();
   }
@@ -249,6 +253,12 @@ refresh();
 $("[data-action=settings]").addEventListener("click", () =>
   api.settings(["android-other-vpn", "android-lockdown"].includes(lastStatus.warning) ? "vpn" : "network"),
 );
+$("[data-action=disclosure-accept]").addEventListener("click", () => {
+  disclosure.close();
+  api.accept();
+  act("on");
+});
+$("[data-action=disclosure-later]").addEventListener("click", () => disclosure.close());
 $("[data-action=tile-add]").addEventListener("click", () => api.addTile());
 for (const b of document.querySelectorAll("[data-action=tile-later], [data-action=tile-ok]")) {
   b.addEventListener("click", () => {
@@ -258,9 +268,11 @@ for (const b of document.querySelectorAll("[data-action=tile-later], [data-actio
 }
 globalThis.offlokRefresh = refresh; // Android's app, back in front, or Android's answer about the tile
 setInterval(refresh, 3000);
-// ?check=<site> runs "Is this site blocked?" at once (screenshots).
-const preset = new URLSearchParams(location.search).get("check");
+// ?check=<site> runs "Is this site blocked?" at once, and ?disclosure shows Android's disclosure (screenshots).
+const params = new URLSearchParams(location.search);
+const preset = params.get("check");
 if (preset) {
   $(".check input").value = preset;
   checkSite(preset);
 }
+if (params.has("disclosure")) disclosure.showModal();

@@ -336,6 +336,24 @@ button { font: inherit; cursor: pointer; }
 
 .admin-hint { margin: 0 0 10px; font-size: 12.5px; color: var(--ink-soft); }
 
+/* Android: what OffLok's VPN does, over the window, before Android first asks for it. */
+.disclosure {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 18px 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.disclosure::backdrop { background: rgb(0 0 0 / 55%); }
+.disclosure h2 { margin: 0 0 8px; font-size: 18px; font-weight: 650; text-wrap: balance; outline: none; } /* focused first: neither answer is preselected */
+.disclosure p { margin: 0 0 10px; font-size: 14.5px; }
+.disclosure .hint { color: var(--ink-soft); font-size: 13.5px; }
+.disclosure-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 14px; }
+.disclosure-actions .primary { padding: 9px 18px; font-size: 15px; }
+
 footer {
   display: flex;
   justify-content: space-between;

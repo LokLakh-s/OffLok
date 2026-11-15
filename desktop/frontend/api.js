@@ -1,6 +1,7 @@
 // The window's backend. In the computers' app, the Go side answers through Wails; in Android's, the app's core
 // answers through the OffLokAndroid bridge; with ?preview=<state> in the address, made-up data stands in
-// (screenshots, design reviews). Errors carry .denied or .notRunning for the window's messages.
+// (screenshots, design reviews). Errors carry .denied or .notRunning for the window's messages, and .disclosure when
+// Android's app waits for the user to accept what OffLok's VPN does.
 const params = new URLSearchParams(location.search);
 const preview = params.get("preview");
 if (params.get("theme")) document.documentElement.dataset.theme = params.get("theme");
@@ -91,7 +92,9 @@ async function call(method, ...args) {
     if (!runtime) throw Object.assign(new Error("no backend"), { notRunning: true });
     r = await runtime.Call.ByName(`main.App.${method}`, ...args);
   }
-  if (!r.ok) throw Object.assign(new Error(r.error || "error"), { denied: r.denied, notRunning: r.not_running });
+  if (!r.ok) {
+    throw Object.assign(new Error(r.error || "error"), { denied: r.denied, notRunning: r.not_running, disclosure: r.disclosure });
+  }
   return r;
 }
 
@@ -105,6 +108,7 @@ export const api = preview
       tile: () => params.get("tile") || "",
       addTile: () => {},
       dismissTile: () => {},
+      accept: () => {},
     }
   : {
       status: async () => (await call("Status")).status,
@@ -118,4 +122,6 @@ export const api = preview
       tile: () => android?.tile?.() || "",
       addTile: () => android?.addTile(),
       dismissTile: () => android?.dismissTile(),
+      // Android: the user accepted what the window says about OffLok's VPN (main.js, the disclosure).
+      accept: () => android?.acceptDisclosure(),
     };

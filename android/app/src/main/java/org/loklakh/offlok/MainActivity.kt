@@ -100,6 +100,10 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun call(id: Int, cmd: String, value: String) {
             if (cmd == "on") {
+                if (!Disclosure.accepted(this@MainActivity)) {
+                    answer(id, JSONObject().put("ok", false).put("disclosure", true).toString())
+                    return
+                }
                 VpnService.prepare(this@MainActivity)?.let { ask ->
                     runOnUiThread {
                         waitingForVpn += id
@@ -110,6 +114,10 @@ class MainActivity : Activity() {
             }
             Thread { answer(id, Core.call(cmd, value)) }.start()
         }
+
+        /** The user accepted what the window says about OffLok's VPN: "on" goes on to Android's permission. */
+        @JavascriptInterface
+        fun acceptDisclosure() = Disclosure.accept(this@MainActivity)
 
         /** Opens one of Android's settings the window points to: "network" (Private DNS), "vpn". */
         @JavascriptInterface

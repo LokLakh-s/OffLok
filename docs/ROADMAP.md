@@ -118,6 +118,8 @@ The milestones of [PLAN.md](PLAN.md), ticked as they land.
 - [x] offlok.org: a privacy policy, in French and English (Google Play asks for one)
 - [x] Android: "Block connections without VPN" cuts every connection but DNS (seen on a real phone): the window
       says so, with a button to Android's VPN settings (Android 10 or later)
+- [x] Android (0.6.4): before Android first asks for the VPN, the window says what it does, to accept or not
+      (Google Play's prominent disclosure), in every version
 
 ## 8. Later
 

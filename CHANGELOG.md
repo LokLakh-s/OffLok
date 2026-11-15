@@ -2,6 +2,13 @@
 
 What changes from one OffLok release to the next. Each release's notes on GitHub start with its section here.
 
+## 0.6.4
+
+- **Android: before OffLok's first start, the window says what its VPN does.** It stays on the phone and receives
+  only your apps' DNS queries; OffLok asks the servers in charge of each name, records none of them and sends
+  nothing to us. "I accept" goes on to Android's own question, "Not now" leaves OffLok off. Google Play asks every
+  app with a VPN for this; every version shows it, once.
+
 ## 0.6.3
 
 - **Windows: Unbound runs as LocalService, no longer as SYSTEM.** It reads what any server on the internet sends: a

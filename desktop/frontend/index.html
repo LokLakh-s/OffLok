@@ -153,5 +153,17 @@
     </footer>
     <p class="error" role="alert" hidden></p>
   </main>
+
+  <!-- Android: what OffLok's VPN does, before Android first asks for it (Google Play's prominent disclosure). -->
+  <dialog class="disclosure" aria-labelledby="disclosure-title">
+    <h2 id="disclosure-title" tabindex="-1" autofocus data-i18n="disclosure.title"></h2>
+    <p data-i18n="disclosure.vpn"></p>
+    <p data-i18n="disclosure.resolve"></p>
+    <p class="hint" data-i18n="disclosure.next"></p>
+    <div class="disclosure-actions">
+      <button type="button" class="ghost" data-action="disclosure-later" data-i18n="disclosure.later"></button>
+      <button type="button" class="primary small" data-action="disclosure-accept" data-i18n="disclosure.accept"></button>
+    </div>
+  </dialog>
 </body>
 </html>

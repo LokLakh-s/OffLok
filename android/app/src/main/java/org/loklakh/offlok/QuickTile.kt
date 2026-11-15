@@ -45,8 +45,8 @@ class QuickTile : TileService() {
     }
 
     override fun onClick() {
-        if (!Core.isOn && VpnService.prepare(this) != null) {
-            // Android asks for its permission once, from OffLok's window.
+        if (!Core.isOn && (!Disclosure.accepted(this) || VpnService.prepare(this) != null)) {
+            // The window says what OffLok's VPN does, then Android asks for its permission, once.
             openWindow()
             return
         }
