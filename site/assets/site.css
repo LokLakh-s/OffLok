@@ -830,6 +830,11 @@ html.js .copy { display: grid; }
 .legal li::marker { color: var(--teal); }
 .back { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; }
 .site-footer.slim { padding: 26px 0; }
+
+/* The testers' page: the legal page's layout, the install steps' numbers, each step's link under its text. */
+.testers .howto { margin: 4px 0 6px; gap: 22px; }
+.testers .howto > li .btn { display: flex; width: fit-content; margin-top: 12px; padding: 11px 18px; font-size: 16px; }
+.testers .howto .why { margin-top: 10px; }
 .site-footer.slim .foot-bottom { margin-top: 0; padding-top: 0; border-top: 0; }
 
 /* Appearing as one scrolls (only with the script, and never with reduced motion). */
