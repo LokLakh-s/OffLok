@@ -1,5 +1,5 @@
 // The store listing's pictures, French and English, into fastlane/metadata/android/<lang>/images/: the feature
-// graphic (1024 × 500, the site's share card made for a phone) and three phone screenshots (1080 × 1920) of the
+// graphic (1024 × 500, the site's share card made for a phone) and four phone screenshots (1080 × 1920) of the
 // window's ?preview= mode on Android. Google Play's version has no ad blocking: no "Ads" row, as on the site.
 //   NODE_PATH=<node_modules with playwright> node fastlane/play-images.cjs
 const { chromium } = require("playwright");
@@ -51,9 +51,18 @@ p { font-size: 22px; line-height: 1.42; color: #a0b5b6; }
 </body></html>`;
 
 // The window on Android, its blocking card as Google Play's version shows it: trackers and malicious sites on, and
-// "Is this site blocked?" naming a tracker list.
+// "Is this site blocked?" naming a tracker list; strict mode on a network that blocks the root servers.
 function playStatus(body) {
   return body.replace('name.includes("pub")', 'name.startsWith("stats.")').replace(
+    '"strict-blocked": { state: "strict-blocked", settings: { strict: true } },',
+    `"strict-blocked": { state: "strict-blocked", platform: "android", backend: "android",
+      settings: { strict: true, blocking: { trackers: true, malicious: true } },
+      blocking: { categories: ["trackers", "malicious", "custom"], lists: [
+        { category: "trackers", name: "ShadowWhisperer Tracking List", names: 118095 },
+        { category: "trackers", name: "HaGeZi's native trackers", names: 21304 },
+        { category: "malicious", name: "URLhaus", names: 9214 },
+      ] } },`,
+  ).replace(
     'match: { category: "ads", source: "AdGuard DNS filter", entry: name }',
     'match: { category: "trackers", source: "ShadowWhisperer Tracking List", entry: name }').replace(
     'android: { state: "direct", platform: "android", backend: "android" },',
@@ -113,11 +122,12 @@ server.listen(0, "127.0.0.1", async () => {
     await card.close();
 
     // 360 × 640 at 3×: 1080 × 1920. 1: the state and the Quick Settings tile; 2: blocking and the settings; 3: a
-    // blocked site checked, dark.
+    // blocked site checked, dark; 4: strict mode where the root servers are blocked, "Sign in to this network", dark.
     const shots = [
       { scheme: "light", query: "preview=android&tile=ask", at: null },
       { scheme: "light", query: "preview=android&tile=dismissed", at: "section.blocking" },
       { scheme: "dark", query: `preview=android&tile=dismissed&check=${c.site}`, at: "section.blocking" },
+      { scheme: "dark", query: "preview=strict-blocked&tile=dismissed", at: null },
     ];
     for (const [i, s] of shots.entries()) {
       const page = await browser.newPage({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 3, colorScheme: s.scheme, locale: c.locale });
