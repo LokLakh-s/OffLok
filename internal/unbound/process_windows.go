@@ -14,29 +14,31 @@ import (
 // Windows has no SIGHUP: offlokd restarts Unbound instead.
 func reload(*os.Process) error { return ErrNoReload }
 
-// asLocalService is cleared once Windows would not run Unbound as LocalService on this machine: from then on, until
-// offlokd restarts, it runs as SYSTEM, as offlokd does. A resolver that does not start at all would break the
-// internet; one that runs with more rights than it needs does not.
-var asLocalService atomic.Bool
+// localServiceAgain is when to try LocalService again after Windows refused it: until then Unbound runs as SYSTEM,
+// as offlokd does. A resolver that does not start at all would break the internet; one that runs with more rights
+// than it needs, for a while, does not. The refusal may pass (a logon refused while the machine sleeps or shuts
+// down): a later start tries again.
+var localServiceAgain atomic.Int64
+
+// localServiceRetry is how long Unbound runs as SYSTEM before LocalService is tried again.
+const localServiceRetry = 10 * time.Minute
 
 // account is the one the last Unbound ran as, so that the log tells of a change only.
 var account atomic.Value
-
-func init() { asLocalService.Store(true) }
 
 // launch starts Unbound as LocalService, an account with no rights over the machine's files beyond what every
 // service has (Linux drops it to unbound, macOS to _offlok): a flaw in Unbound, which reads what any server on the
 // internet sends, then gives no one SYSTEM. Failing that, as SYSTEM.
 func launch(binary, conf string, log func(string)) (*launched, error) {
-	if asLocalService.Load() {
+	if time.Now().UnixNano() >= localServiceAgain.Load() {
 		l, err := launchAsLocalService(binary, conf, log)
 		if err == nil {
 			tell(log, "LocalService")
 			return l, nil
 		}
-		asLocalService.Store(false)
+		localServiceAgain.Store(time.Now().Add(localServiceRetry).UnixNano())
 		if log != nil {
-			log(fmt.Sprintf("cannot run as LocalService (%v)", err))
+			log(fmt.Sprintf("cannot run as LocalService (%v); trying again at a start after %v", err, localServiceRetry))
 		}
 	}
 	tell(log, "SYSTEM")
@@ -168,9 +170,9 @@ func launchAsLocalService(binary, conf string, log func(string)) (*launched, err
 		}
 		code := uint32(st.ExitCode())
 		if (code == statusDLLInitFailed || code == statusAccessDenied) && time.Since(started) < 10*time.Second {
-			asLocalService.Store(false)
+			localServiceAgain.Store(time.Now().Add(localServiceRetry).UnixNano())
 			if log != nil {
-				log(fmt.Sprintf("exited at once as LocalService (%#x): it runs as SYSTEM from now on", code))
+				log(fmt.Sprintf("exited at once as LocalService (%#x): it runs as SYSTEM for %v", code, localServiceRetry))
 			}
 		}
 		return fmt.Errorf("unbound exited with code %#x", code)

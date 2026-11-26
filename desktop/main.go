@@ -193,19 +193,76 @@ func main() {
 	var window *application.WebviewWindow
 	var tray *application.SystemTray
 	var mu sync.Mutex
+	var closedAt atomic.Int64
+	options := application.WebviewWindowOptions{
+		Name:          "offlok",
+		Title:         "OffLok",
+		Width:         440,
+		Height:        720,
+		MinWidth:      380,
+		MinHeight:     520,
+		URL:           "/",
+		HideOnEscape:  true,
+		DisableResize: false,
+	}
+	if flyout {
+		options.Frameless = true
+		options.AlwaysOnTop = true
+		options.DisableResize = true
+		options.Height = 640
+		options.Hidden = true // shown next to the tray icon once the app runs
+		options.Windows.HiddenOnTaskbar = true
+	}
+	var app *application.App
+	// ensureWindow makes the window the first time it is needed: started hidden at the session's start, the app is
+	// a tray icon alone, without the web view's processes and their memory, until the window is first opened. Called
+	// with mu held.
+	ensureWindow := func() {
+		if window != nil {
+			return
+		}
+		window = app.Window.NewWithOptions(options)
+		// Closing the window keeps the tray: OffLok's service runs on regardless.
+		window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+			window.Hide()
+			e.Cancel()
+		})
+		// The flyout closes when the focus goes elsewhere, except to UAC's prompt for one of its own settings. The
+		// click on the tray icon that took the focus away must not open it again at once.
+		if flyout {
+			w := window
+			w.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
+				if !elevating.Load() && w.IsVisible() {
+					w.Hide()
+					closedAt.Store(time.Now().UnixNano())
+				}
+			})
+		}
+		if tray != nil {
+			tray.AttachWindow(window).WindowOffset(12)
+		}
+	}
 	// show opens the window, next to the tray icon when it is a flyout.
 	show := func() {
 		mu.Lock()
 		defer mu.Unlock()
-		switch {
-		case flyout && tray != nil:
+		if tray == nil && flyout {
+			return
+		}
+		ensureWindow()
+		if flyout {
 			tray.ShowWindow()
-		case window != nil:
+		} else {
 			window.Show()
 			window.Focus()
 		}
 	}
-	app := application.New(application.Options{
+	visible := func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return window != nil && window.IsVisible()
+	}
+	app = application.New(application.Options{
 		Name:        "OffLok",
 		Description: "Your computer as its own DNS resolver",
 		Icon:        appIcon,
@@ -220,48 +277,11 @@ func main() {
 		Mac:   application.MacOptions{ActivationPolicy: application.ActivationPolicyAccessory},
 	})
 
-	options := application.WebviewWindowOptions{
-		Name:          "offlok",
-		Title:         "OffLok",
-		Width:         440,
-		Height:        720,
-		MinWidth:      380,
-		MinHeight:     520,
-		Hidden:        *hidden,
-		URL:           "/",
-		HideOnEscape:  true,
-		DisableResize: false,
-	}
-	if flyout {
-		options.Frameless = true
-		options.AlwaysOnTop = true
-		options.DisableResize = true
-		options.Height = 640
-		options.Hidden = true // shown next to the tray icon once the app runs
-		options.Windows.HiddenOnTaskbar = true
-	}
-	mu.Lock()
-	window = app.Window.NewWithOptions(options)
-	mu.Unlock()
-	// Closing the window keeps the tray: OffLok's service runs on regardless.
-	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		window.Hide()
-		e.Cancel()
-	})
-	// The flyout closes when the focus goes elsewhere, except to UAC's prompt for one of its own settings. The
-	// click on the tray icon that took the focus away must not open it again at once.
-	var closedAt atomic.Int64
-	if flyout {
-		window.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
-			if !elevating.Load() && window.IsVisible() {
-				window.Hide()
-				closedAt.Store(time.Now().UnixNano())
-			}
-		})
-	}
-
 	mu.Lock()
 	tray = app.SystemTray.New()
+	if !*hidden && !flyout {
+		ensureWindow() // Linux, opened from the menu: a window of its own at once
+	}
 	mu.Unlock()
 	tray.SetIcon(icon("off"))
 	tray.SetTooltip("OffLok")
@@ -270,11 +290,12 @@ func main() {
 	menu.AddSeparator()
 	menu.Add(i18n.T(lang, "tray.quit")).OnClick(func(*application.Context) { app.Quit() })
 	tray.SetMenu(menu)
-	tray.AttachWindow(window).WindowOffset(12)
 	tray.OnClick(func() {
 		switch {
-		case window.IsVisible():
+		case visible():
+			mu.Lock()
 			window.Hide()
+			mu.Unlock()
 		case time.Since(time.Unix(0, closedAt.Load())) < 400*time.Millisecond:
 		default:
 			show()
@@ -301,7 +322,7 @@ func main() {
 			}
 			// offlokd was updated, and this program with it: the new one takes over.
 			if st != nil && st.Version != "" && st.Version != version && version != "dev" && replaced(exe, started) {
-				relaunch(app, exe, !window.IsVisible())
+				relaunch(app, exe, !visible())
 				return
 			}
 			pic, tip := trayState(lang, st)

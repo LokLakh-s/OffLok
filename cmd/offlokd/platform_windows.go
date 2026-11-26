@@ -76,14 +76,16 @@ func (s *service) Execute(_ []string, req <-chan svc.ChangeRequest, status chan<
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- serve(ctx, openLog(s.stateDir), s.stateDir, s.unboundDir, s.socket) }()
-	status <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
+	// Pre-shutdown comes before Windows stops the other processes: offlokd gives the DNS back and stops Unbound then,
+	// rather than start again an Unbound the shutdown ended, as SYSTEM since LocalService's logon is refused by then.
+	status <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPreShutdown}
 	for {
 		select {
 		case c := <-req:
 			switch c.Cmd {
 			case svc.Interrogate:
 				status <- c.CurrentStatus
-			case svc.Stop, svc.Shutdown:
+			case svc.Stop, svc.Shutdown, svc.PreShutdown:
 				status <- svc.Status{State: svc.StopPending}
 				cancel()
 				s.err = <-done

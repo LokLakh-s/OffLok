@@ -10,7 +10,7 @@ import (
 )
 
 // logLimit is offlokd.log's size; past it, the log goes on in a new file and the full one is kept as
-// offlokd.log.old.
+// offlokd.log.old, the one before as offlokd.log.old2: three files, about three times the history.
 const logLimit = 1 << 20
 
 // openLog writes to offlokd.log in the state directory. A service has no console; the log never holds a looked-up
@@ -36,7 +36,7 @@ type cappedLog struct {
 
 func (w *cappedLog) open() error {
 	if st, err := os.Stat(w.path); err == nil && st.Size() > logLimit {
-		_ = os.Rename(w.path, w.path+".old")
+		w.rotate()
 	}
 	f, err := os.OpenFile(w.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -52,7 +52,7 @@ func (w *cappedLog) open() error {
 func (w *cappedLog) Write(b []byte) (int, error) {
 	if w.size+int64(len(b)) > logLimit {
 		w.f.Close()
-		_ = os.Rename(w.path, w.path+".old")
+		w.rotate()
 		if err := w.open(); err != nil {
 			return 0, err
 		}
@@ -60,4 +60,9 @@ func (w *cappedLog) Write(b []byte) (int, error) {
 	n, err := w.f.Write(b)
 	w.size += int64(n)
 	return n, err
+}
+
+func (w *cappedLog) rotate() {
+	_ = os.Rename(w.path+".old", w.path+".old2")
+	_ = os.Rename(w.path, w.path+".old")
 }

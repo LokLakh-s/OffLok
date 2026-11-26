@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"github.com/loklakh-s/offlok/internal/daemon"
@@ -11,7 +13,20 @@ import (
 )
 
 func newUpdater(src *update.Source, dir string) *daemon.Updater {
-	return &daemon.Updater{Source: src, Dir: dir, Files: installerFile, Install: runInstaller}
+	return &daemon.Updater{Source: src, Dir: dir, Files: installerFile, Install: runInstaller, Leftovers: removeOld}
+}
+
+// removeOld deletes the programs the installer set aside as .old next to offlokd.exe because they ran (the command,
+// the tray app). One still running (an old tray app nobody closed) stays until the next start.
+func removeOld() {
+	exe, err := os.Executable()
+	if err != nil {
+		return
+	}
+	old, _ := filepath.Glob(filepath.Join(filepath.Dir(exe), "*.old"))
+	for _, f := range old {
+		_ = os.Remove(f)
+	}
 }
 
 func installerFile(r update.Release) ([]string, error) {

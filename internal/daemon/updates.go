@@ -25,6 +25,9 @@ type Updater struct {
 	// Install hands the downloaded files to the system's installer and waits for it. The installer outlives
 	// offlokd: on success it stops this offlokd and starts the new one, so Install mostly returns its failures.
 	Install func(paths []string) error
+	// Leftovers, when set, removes what an earlier update left behind on this system (Windows: the programs set
+	// aside as .old while they ran).
+	Leftovers func()
 }
 
 // UpdateStatus is the updates' part of the status.
@@ -43,6 +46,16 @@ func (d *Daemon) updatesLoop(ctx context.Context) {
 	case <-ctx.Done():
 		return
 	case <-time.After(updateFirst):
+	}
+	// By now the installer that started this offlokd is done: its download, and the programs it set aside, go.
+	d.mu.Lock()
+	busy := d.upd.State != ""
+	d.mu.Unlock()
+	if !busy {
+		_ = os.RemoveAll(d.Updater.Dir)
+		if d.Updater.Leftovers != nil {
+			d.Updater.Leftovers()
+		}
 	}
 	t := time.NewTicker(updateLooks)
 	defer t.Stop()

@@ -2,6 +2,26 @@
 
 What changes from one OffLok release to the next. Each release's notes on GitHub start with its section here.
 
+## 0.6.5
+
+- **Windows: turning OffLok off or uninstalling it could leave a connection without DNS.** When a connection
+  already pointed at OffLok as OffLok first saw it (a restore that did not take while the Wi-Fi reset, a crash),
+  OffLok saved its own address as that connection's original DNS, and gave it back. It now never saves nor gives
+  back a loopback address: the connection goes back to automatic (DHCP), and the files 0.6.4 or earlier saved that
+  way are repaired.
+- **Windows: Unbound keeps its cache through a Wi-Fi reconnection.** Windows cannot reload Unbound, so each
+  change of the network's DNS restarted it, five or six times as a computer starts. It now restarts once the
+  network has been stable for 10 seconds, and answers from its cache meanwhile.
+- **Windows:** the router's link-local IPv6 addresses (`fe80::`), which Unbound cannot use without their interface,
+  are no longer handed to it for local names.
+- **Windows:** Unbound runs as LocalService again 10 minutes after Windows refused it once (asleep, shutting
+  down), instead of as SYSTEM until offlokd restarts; offlokd stops as Windows begins to shut down.
+- **Windows: the tray app, started at sign-in, runs no web view until its window is first opened** (some 200 MB
+  and seven processes less).
+- **Windows:** after an update, the downloaded installer and the programs set aside as `.old` are deleted.
+- **The log:** Unbound's connection failures while the network is gone are folded into one line a minute, with
+  their count, and offlokd keeps two old logs instead of one.
+
 ## 0.6.4
 
 - **Android: before OffLok's first start, the window says what its VPN does.** It stays on the phone and receives

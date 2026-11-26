@@ -199,7 +199,7 @@ func (w *Windows) Apply(servers []netip.Addr) error {
 				errs = append(errs, fmt.Errorf("%s: read its DNS: %v", a.name, errors.Join(err4, err6)))
 				continue
 			}
-			saved[a.name] = ifaceDNS{V4: cur4, V6: cur6}
+			saved[a.name] = ifaceDNS{V4: savedServers(cur4), V6: savedServers(cur6)}
 			if err := w.save(saved); err != nil {
 				return err
 			}
@@ -253,10 +253,11 @@ func (w *Windows) Restore() error {
 		if err != nil {
 			continue
 		}
-		if err := setNameServer(guid, false, orig.V4); err != nil {
+		// Filtered again: a state file saved by 0.6.4 or before may hold OffLok's own address.
+		if err := setNameServer(guid, false, savedServers(orig.V4)); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", name, err))
 		}
-		if err := setNameServer(guid, true, orig.V6); err != nil {
+		if err := setNameServer(guid, true, savedServers(orig.V6)); err != nil {
 			errs = append(errs, fmt.Errorf("%s (IPv6): %w", name, err))
 		}
 	}
@@ -276,7 +277,7 @@ func (w *Windows) Network() (Network, error) {
 	}
 	var n Network
 	add := func(s string) {
-		for _, f := range strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == ' ' }) {
+		for _, f := range strings.FieldsFunc(savedServers(s), func(r rune) bool { return r == ',' }) {
 			if a, err := netip.ParseAddr(f); err == nil && !slices.Contains(n.Servers, a) {
 				n.Servers = append(n.Servers, a)
 			}

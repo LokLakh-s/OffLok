@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -36,7 +37,10 @@ import (
 )
 
 const (
-	tick          = 5 * time.Second
+	tick = 5 * time.Second
+	// Where Unbound cannot reload (Windows), a new configuration restarts it and empties its cache: it waits until
+	// the network has settled, as a Wi-Fi reconnection or a boot changes the network's DNS several times in a minute.
+	restartSettle = 10 * time.Second
 	probeDirect   = time.Minute      // how often the root is checked while it answers
 	probeFallback = 15 * time.Second // and while it does not
 	retryAfter    = time.Minute      // wait after a failure before trying again
@@ -99,6 +103,8 @@ type Daemon struct {
 	// Owned by the loop goroutine.
 	ub        unbound.Engine
 	conf      []byte
+	pending   []byte    // a configuration Unbound must restart for, waiting for restartSettle
+	pendingAt time.Time // since when it has not changed
 	front     *front.Server
 	serving   atomic.Pointer[front.Server] // the front, for Answer
 	listen    []netip.Addr                 // the front's
@@ -539,6 +545,7 @@ func (d *Daemon) converge(ctx context.Context, s settings.Settings) (decision, e
 // runUnbound starts Unbound, or reloads it when its configuration changed.
 func (d *Daemon) runUnbound(ctx context.Context, conf []byte) error {
 	if d.ub != nil && bytes.Equal(conf, d.conf) {
+		d.pending = nil // the network came back to what Unbound runs with
 		return nil
 	}
 	if err := os.WriteFile(d.confPath(), conf, 0o644); err != nil {
@@ -554,6 +561,13 @@ func (d *Daemon) runUnbound(ctx context.Context, conf []byte) error {
 		}
 		d.ub = e
 	} else if err := d.ub.Reload(); errors.Is(err, unbound.ErrNoReload) {
+		if !bytes.Equal(conf, d.pending) {
+			d.pending, d.pendingAt = conf, time.Now()
+		}
+		if d.ub.Running() && time.Since(d.pendingAt) < restartSettle {
+			return nil // the running Unbound answers meanwhile, its cache kept
+		}
+		d.pending = nil
 		_ = d.ub.Stop(5 * time.Second)
 		d.ub = nil
 		return d.runUnbound(ctx, conf)
@@ -570,7 +584,7 @@ func (d *Daemon) runUnbound(ctx context.Context, conf []byte) error {
 }
 
 func (d *Daemon) newEngine() unbound.Engine {
-	log := func(l string) { d.Log.Print("unbound: " + l) }
+	log := d.unboundLog()
 	if d.Engine != nil {
 		return d.Engine(d.confPath(), d.unboundAddr(), log)
 	}
@@ -758,4 +772,30 @@ func (d *Daemon) SetDoT(ctx context.Context, name string, port uint16) error {
 		s.DoT = &settings.DoT{Name: name, Port: port, Addrs: addrs, ResolvedAt: time.Now()}
 		return nil
 	})
+}
+
+// unboundLog writes Unbound's lines to offlokd's log, but the same kind of failure repeated (Unbound on Windows
+// says "udp connect failed" for every query while the network is gone, thousands a minute) once a minute at most,
+// with how many there were.
+func (d *Daemon) unboundLog() func(string) {
+	var mu sync.Mutex
+	var since time.Time
+	var dropped int
+	return func(l string) {
+		mu.Lock()
+		defer mu.Unlock()
+		failure := strings.Contains(l, "connect failed")
+		if failure && !since.IsZero() && time.Since(since) < time.Minute {
+			dropped++
+			return
+		}
+		if dropped > 0 {
+			d.Log.Printf("unbound: %d more connection failures since %s", dropped, since.Format("15:04:05"))
+			dropped = 0
+		}
+		d.Log.Print("unbound: " + l)
+		if failure {
+			since = time.Now()
+		}
+	}
 }

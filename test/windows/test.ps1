@@ -91,6 +91,12 @@ Check 'the root back, no resolver set: as before' {
 Start-Process (Join-Path $dir 'offlok-desktop.exe') -ArgumentList '--hidden'
 Start-Sleep -Seconds 8
 Check 'the tray app starts and stays up' { [bool](Get-Process offlok-desktop -ErrorAction SilentlyContinue) }
+# Started hidden (the session's autostart), it is a tray icon alone: no web view, no WebView2 processes, until the
+# window is first opened.
+Check 'hidden, the tray app runs no web view' {
+    $tray = @(Get-Process offlok-desktop -ErrorAction SilentlyContinue)[0].Id
+    -not @(Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" | Where-Object { $_.ParentProcessId -eq $tray })
+}
 
 # NSIS's uninstaller relaunches itself from %TEMP%: wait for its work instead of for the process.
 Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S'
