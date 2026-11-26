@@ -19,6 +19,8 @@ What changes from one OffLok release to the next. Each release's notes on GitHub
 - **Windows: the tray app, started at sign-in, runs no web view until its window is first opened** (some 200 MB
   and seven processes less).
 - **Windows:** after an update, the downloaded installer and the programs set aside as `.old` are deleted.
+- **macOS:** an update always goes to `/Applications/OffLok.app`. Before, the installer could put it in another
+  copy of the app found on the Mac (one left in Downloads, for instance), and the old version stayed in use.
 - **The log:** Unbound's connection failures while the network is gone are folded into one line a minute, with
   their count, and offlokd keeps two old logs instead of one.
 

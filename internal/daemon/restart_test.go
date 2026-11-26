@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"io"
 	"log"
 	"strings"
 	"testing"
@@ -22,7 +23,7 @@ func (e *noReload) Stop(time.Duration) error { e.stops++; return nil }
 // A network that changes several times in a row restarts Unbound once it has settled, never in between.
 func TestRestartWaitsForTheNetworkToSettle(t *testing.T) {
 	e := &noReload{}
-	d := &Daemon{ub: e, conf: []byte("a"), UnboundPort: 1}
+	d := &Daemon{ub: e, conf: []byte("a"), UnboundPort: 1, Log: log.New(io.Discard, "", 0)}
 	d.Paths.Unbound = t.TempDir()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

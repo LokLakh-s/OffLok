@@ -43,9 +43,17 @@ sed "s/@VERSION@/$VERSION/g" "$mac/Info.plist" >"$app/Contents/Info.plist"
 iconutil -c icns "$mac/offlok.iconset" -o "$app/Contents/Resources/offlok.icns"
 
 # The component package, then the installer around it: its welcome page (what OffLok changes and sends) and the
-# licence, in English and French, following the Mac's language.
-pkgbuild --root "$root" --scripts "$mac/scripts" --identifier org.loklakh.offlok --version "$VERSION" \
-	--install-location / --ownership recommended "$build/offlok-component.pkg"
+# licence, in English and French, following the Mac's language. The app is not relocatable: by default, the
+# installer puts an update wherever another copy of OffLok.app is (one in Downloads, or the build's own), and
+# /Applications keeps the old version.
+pkgbuild --analyze --root "$root" "$build/component.plist"
+for ((i = 0; ; i++)); do
+	/usr/libexec/PlistBuddy -c "Print :$i" "$build/component.plist" >/dev/null 2>&1 || break
+	/usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "$build/component.plist"
+done
+pkgbuild --root "$root" --component-plist "$build/component.plist" --scripts "$mac/scripts" \
+	--identifier org.loklakh.offlok --version "$VERSION" --install-location / --ownership recommended \
+	"$build/offlok-component.pkg"
 resources=$build/resources
 cp -R "$mac/resources" "$resources"
 for lang in en fr; do cp LICENSE "$resources/$lang.lproj/LICENSE.txt"; done
